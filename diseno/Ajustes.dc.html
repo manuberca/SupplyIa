@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>SupplyIA · Ajustes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:#F0F1ED;color:#15201D}
+a{color:#13485B}a:hover{color:#0B2F3C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F0F1ED; color: #15201D; font-family: 'Schibsted Grotesk', Helvetica, Arial, sans-serif; overflow: hidden">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 14px">
+<header style="display: flex; align-items: center; gap: 10px">
+<a href="Main.dc.html" aria-label="Volver" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #15201D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+<div style="display: flex; flex-direction: column; gap: 2px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Ajustes</h1><span style="font-size: 12px; color: #5B6661">Bar Demo · solo administración</span></div>
+</header>
+<section style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 16px; background: #FFFFFF; border: 1px solid #DADDD6">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Alerta de aumento</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px">
+<span style="font-size: 14px; line-height: 1.35">Avisar cuando un insumo sube más de</span>
+<div style="display: flex; align-items: center; gap: 2px; border: 1.5px solid #13485B; border-radius: 12px; padding: 2px; flex-shrink: 0"><button type="button" aria-label="Bajar porcentaje" style="width: 36px; height: 36px; border: none; background: transparent; font-size: 20px; color: #13485B; font-family: inherit">−</button><span style="min-width: 40px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">10%</span><button type="button" aria-label="Subir porcentaje" style="width: 36px; height: 36px; border: none; background: transparent; font-size: 20px; color: #13485B; font-family: inherit">+</button></div>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #ECEEE8">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Verdulería Don Tito</span><span style="font-size: 12px; color: #5B6661">Excepción para este proveedor</span></div>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">20%</span>
+</div>
+<span style="font-size: 13px; font-weight: 600; color: #13485B">+ Excepción por proveedor o producto</span>
+</section>
+<section style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 16px; background: #FFFFFF; border: 1px solid #DADDD6">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">Tolerancia al recibir</h2>
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 14px">Productos por peso</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 10px; background: #F0F1ED">± 10%</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 14px">Productos por unidad</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 10px; background: #F0F1ED">exacto</span></div>
+</section>
+<section style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 16px; background: #FFFFFF; border: 1px solid #DADDD6">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 15px; font-weight: 700">Unidades</h2><span style="font-size: 12px; color: #5B6661">8 en uso</span></div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">kg</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">unidad</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">atado</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">caja</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">bolsa</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">jaula</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">maple</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: #F0F1ED">bidón</span>
+<button type="button" style="font-size: 13px; font-weight: 700; padding: 6px 11px; border-radius: 999px; border: 1.5px dashed #13485B; background: #FFFFFF; color: #13485B; font-family: inherit">+ Nueva unidad</button>
+</div>
+</section>
+<div style="display: flex; flex-direction: column; border-radius: 16px; background: #FFFFFF; border: 1px solid #DADDD6">
+<a href="Proveedores.dc.html" style="display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; color: #15201D; text-decoration: none"><span style="font-size: 14px; font-weight: 600">Proveedores y productos</span><span style="font-size: 13px; color: #5B6661">5 · 46 productos</span></a>
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-top: 1px solid #ECEEE8"><span style="font-size: 14px; font-weight: 600">Equipo y permisos</span><span style="font-size: 13px; color: #5B6661">3 usuarios</span></div>
+</div>
+</div>
+<nav aria-label="Secciones" style="display: flex; justify-content: space-around; align-items: flex-start; height: 76px; box-sizing: border-box; padding: 10px 6px 0; background: #FFFFFF; border-top: 1px solid #DADDD6; flex-shrink: 0">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; text-decoration: none; color: #5B6661; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"></path></svg>Inicio</a>
+<a href="NuevoPedido.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; text-decoration: none; color: #5B6661; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4h6v3H9zM9 12h6M9 16h4"></path></svg>Pedir</a>
+<a href="Recepcion.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; text-decoration: none; color: #5B6661; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"></path></svg>Recibir</a>
+<a href="Proveedores.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; text-decoration: none; color: #5B6661; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"></path><circle cx="7" cy="18" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>Proveedores</a>
+<a href="Precios.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 64px; text-decoration: none; color: #5B6661; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg>Precios</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

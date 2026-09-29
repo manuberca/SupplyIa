@@ -1,0 +1,22 @@
+/* Copiado de SPEC.md §4. Colores y tipografías solo desde acá. */
+:root {
+  --fondo: #f0f1ed;
+  --card: #ffffff;
+  --tinta: #15201d;
+  --gris: #5b6661;
+  --linea: #daddd6;
+  --linea-suave: #eceee8;
+  --petroleo: #13485b; /* acento principal */
+  --petroleo-suave: #dce8ec;
+  --amarillo: #f2b01e; /* solo el sello "IA" y el botón de enviar */
+  --ok: #1e6b45;
+  --ok-bg: #dff0e6;
+  --aviso: #8a5300;
+  --aviso-bg: #fbebc8;
+  --error: #a3261b;
+  --error-bg: #f9deda;
+  --radio: 16px;
+
+  --fuente: 'Schibsted Grotesk', Helvetica, Arial, sans-serif;
+  --fuente-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

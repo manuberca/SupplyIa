@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>SupplyIA · Nuevo proveedor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:#F0F1ED;color:#15201D}
+a{color:#13485B}a:hover{color:#0B2F3C}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F0F1ED; color: #15201D; font-family: 'Schibsted Grotesk', Helvetica, Arial, sans-serif; overflow: hidden">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px; padding: 16px 20px 24px">
+<header style="display: flex; align-items: center; gap: 10px">
+<a href="Proveedores.dc.html" aria-label="Volver" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #15201D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+<h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Nuevo proveedor</h1>
+</header>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="prov-nombre" style="font-size: 13px; font-weight: 600">Nombre</label>
+<input id="prov-nombre" type="text" value="Pescadería Del Puerto" style="height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #DADDD6; background: #FFFFFF; font-family: inherit; font-size: 16px; color: #15201D">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="prov-wa" style="font-size: 13px; font-weight: 600">WhatsApp para pedidos</label>
+<div style="display: flex; gap: 8px">
+<span style="height: 48px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; border-radius: 12px; border: 1px solid #DADDD6; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 15px">+54 9</span>
+<input id="prov-wa" type="tel" inputmode="tel" placeholder="341 1234567" style="flex-grow: 1; min-width: 0; height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1.5px solid #1E6B45; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #15201D">
+</div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #1E6B45"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Número válido · no está repetido en otro proveedor</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; font-weight: 600">Días que entrega</span>
+<div role="group" aria-label="Días de entrega" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+<button type="button" aria-pressed="true" aria-label="Lunes" style="height: 44px; border-radius: 10px; border: 1.5px solid #13485B; background: #DCE8EC; color: #13485B; font-family: inherit; font-size: 14px; font-weight: 700">L</button>
+<button type="button" aria-pressed="false" aria-label="Martes" style="height: 44px; border-radius: 10px; border: 1px solid #DADDD6; background: #FFFFFF; color: #15201D; font-family: inherit; font-size: 14px; font-weight: 600">M</button>
+<button type="button" aria-pressed="true" aria-label="Miércoles" style="height: 44px; border-radius: 10px; border: 1.5px solid #13485B; background: #DCE8EC; color: #13485B; font-family: inherit; font-size: 14px; font-weight: 700">M</button>
+<button type="button" aria-pressed="false" aria-label="Jueves" style="height: 44px; border-radius: 10px; border: 1px solid #DADDD6; background: #FFFFFF; color: #15201D; font-family: inherit; font-size: 14px; font-weight: 600">J</button>
+<button type="button" aria-pressed="true" aria-label="Viernes" style="height: 44px; border-radius: 10px; border: 1.5px solid #13485B; background: #DCE8EC; color: #13485B; font-family: inherit; font-size: 14px; font-weight: 700">V</button>
+<button type="button" aria-pressed="false" aria-label="Sábado" style="height: 44px; border-radius: 10px; border: 1px solid #DADDD6; background: #FFFFFF; color: #15201D; font-family: inherit; font-size: 14px; font-weight: 600">S</button>
+<button type="button" aria-pressed="false" aria-label="Domingo" style="height: 44px; border-radius: 10px; border: 1px solid #DADDD6; background: #FFFFFF; color: #15201D; font-family: inherit; font-size: 14px; font-weight: 600">D</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="prov-hora" style="font-size: 13px; font-weight: 600">Pedir antes de</label>
+<input id="prov-hora" type="text" value="18:00 del día anterior" style="height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #DADDD6; background: #FFFFFF; font-family: inherit; font-size: 16px; color: #15201D">
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 16px; background: #DCE8EC">
+<span style="font-size: 14px; font-weight: 700">Productos</span>
+<span style="font-size: 13px; line-height: 1.4; color: #33514F">Después de guardar, cargalos uno por uno o subí la planilla de Excel con todos juntos.</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px; margin-top: auto">
+<button type="button" style="height: 50px; border: none; border-radius: 12px; background: #13485B; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700">Guardar proveedor</button>
+<button type="button" style="height: 50px; border-radius: 12px; border: 1.5px solid #15201D; background: #FFFFFF; color: #15201D; font-family: inherit; font-size: 15px; font-weight: 700">Guardar e importar productos</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
