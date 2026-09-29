@@ -18,9 +18,12 @@
     "db:login": "supabase login",
     "db:link": "supabase link --project-ref",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/lib/database.types.ts",
+    "db:datos-prueba": "node scripts/datos-prueba.ts",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "^1.48.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

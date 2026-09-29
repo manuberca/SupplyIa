@@ -43,3 +43,8 @@ Especificación: `SPEC.md`. Reglas de trabajo: `CLAUDE.md`. En qué etapa estamo
 | `npm run typecheck` | Chequeo de tipos |
 | `npm run lint` | Revisión de estilo del código |
 | `npm run build` | Arma la versión para publicar |
+| `npm run test:db` | Tests de seguridad contra la base de desarrollo |
+| `npm run db:datos-prueba` | Carga las organizaciones de prueba en desarrollo |
+| `npm run db:push` | Aplica las migraciones a la base vinculada |
+
+En Windows con PowerShell, si `npm` da error de "ejecución de scripts deshabilitada", usá `npm.cmd`.
