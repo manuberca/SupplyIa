@@ -1,5 +1,7 @@
 import { Link } from 'react-router'
 import { ClipboardList, ScanLine } from 'lucide-react'
+import { puede } from '../lib/permisos'
+import { useSesionLista } from '../sesion/contexto'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 const MESES = [
@@ -23,6 +25,9 @@ function fechaDeHoy(): string {
 }
 
 export function Inicio() {
+  const { miembro } = useSesionLista()
+  const puedePedir = puede(miembro.rol, 'pedir')
+
   return (
     <>
       <div>
@@ -30,14 +35,16 @@ export function Inicio() {
         <h1>¿Qué necesitás hoy?</h1>
       </div>
 
-      <div className="accesos">
-        <Link to="/pedir" className="acceso acceso--pedir">
-          <ClipboardList size={26} strokeWidth={1.8} aria-hidden="true" />
-          <div>
-            <div className="acceso__titulo">Nuevo pedido</div>
-            <div className="acceso__detalle">Elegí proveedor y mandalo por WhatsApp</div>
-          </div>
-        </Link>
+      <div className={puedePedir ? 'accesos' : 'accesos accesos--uno'}>
+        {puedePedir && (
+          <Link to="/pedir" className="acceso acceso--pedir">
+            <ClipboardList size={26} strokeWidth={1.8} aria-hidden="true" />
+            <div>
+              <div className="acceso__titulo">Nuevo pedido</div>
+              <div className="acceso__detalle">Elegí proveedor y mandalo por WhatsApp</div>
+            </div>
+          </Link>
+        )}
         <Link to="/recibir" className="acceso acceso--recibir">
           <ScanLine size={26} strokeWidth={1.8} aria-hidden="true" />
           <div>

@@ -1,20 +1,81 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { Estructura } from './components/Estructura'
+import { PantallaEstado } from './components/PantallaEstado'
+import { Protegida } from './components/Protegida'
+import { Ajustes } from './pages/Ajustes'
 import { Inicio } from './pages/Inicio'
+import { Login } from './pages/Login'
 import { Pendiente } from './pages/Pendiente'
+import { useSesion } from './sesion/contexto'
 
 export function App() {
-  return (
-    <Routes>
-      <Route element={<Estructura />}>
-        <Route index element={<Inicio />} />
-        <Route path="pedir" element={<Pendiente titulo="Nuevo pedido" etapa={3} />} />
-        <Route path="recibir" element={<Pendiente titulo="Recibir mercadería" etapa={4} />} />
-        <Route path="proveedores" element={<Pendiente titulo="Proveedores" etapa={2} />} />
-        <Route path="precios" element={<Pendiente titulo="Precios" etapa={5} />} />
-        <Route path="ajustes" element={<Pendiente titulo="Ajustes" etapa={2} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
-  )
+  const { sesion, salir, reintentar } = useSesion()
+
+  switch (sesion.estado) {
+    case 'cargando':
+      return <PantallaEstado titulo="Cargando…" cargando />
+    case 'sin_sesion':
+      return <Login />
+    case 'error':
+      return (
+        <PantallaEstado titulo="No pudimos entrar">
+          <p className="aviso aviso--error" role="alert">
+            {sesion.mensaje}
+          </p>
+          <button className="boton boton--primario" onClick={reintentar}>
+            Probar de nuevo
+          </button>
+          <button className="boton boton--texto" onClick={salir}>
+            Cerrar sesión
+          </button>
+        </PantallaEstado>
+      )
+    case 'sin_membresia':
+      return (
+        <PantallaEstado titulo="Todavía no tenés acceso">
+          <p className="formulario__ayuda">
+            Entraste como <strong>{sesion.email}</strong>, pero ese usuario no está en ningún bar.
+            Pedile a quien administra tu bar que te invite.
+          </p>
+          <button className="boton boton--secundario" onClick={salir}>
+            Entrar con otro mail
+          </button>
+        </PantallaEstado>
+      )
+    case 'lista':
+      return (
+        <Routes>
+          <Route element={<Estructura />}>
+            <Route index element={<Inicio />} />
+            <Route
+              path="pedir"
+              element={
+                <Protegida seccion="pedir">
+                  <Pendiente titulo="Nuevo pedido" etapa={3} />
+                </Protegida>
+              }
+            />
+            <Route path="recibir" element={<Pendiente titulo="Recibir mercadería" etapa={4} />} />
+            <Route
+              path="proveedores"
+              element={
+                <Protegida seccion="proveedores">
+                  <Pendiente titulo="Proveedores" etapa={2} />
+                </Protegida>
+              }
+            />
+            <Route
+              path="precios"
+              element={
+                <Protegida seccion="precios">
+                  <Pendiente titulo="Precios" etapa={5} />
+                </Protegida>
+              }
+            />
+            <Route path="ajustes" element={<Ajustes />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      )
+  }
 }

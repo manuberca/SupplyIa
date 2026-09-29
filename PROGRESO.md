@@ -9,7 +9,7 @@ Se actualiza al terminar cada paso, así cualquier computadora sabe dónde segui
 - [x] 3. PWA: manifest e íconos (provisorios, desde `public/icono.svg`)
 - [x] Repo en GitHub (github.com/manuberca/SupplyIa) y primer push
 - [x] 4. Supabase dev: vinculado, migración `base` aplicada y datos de prueba (`npm run db:datos-prueba`): Bar Prueba A (2 locales, admin/encargado/recepción) y Bar Prueba B (1 local, admin). El proyecto prod se crea antes del deploy.
-- [ ] 5. Login (enlace mágico y contraseña), sesión con organización, rol y locales, rutas por rol
+- [x] 5. Login con contraseña o código por mail (sin altas abiertas: `shouldCreateUser: false`), sesión con organización, rol y locales, selector de local (se recuerda por dispositivo), barra y rutas según el rol. Probado en el navegador con recepción y admin. Pendiente en el panel de Supabase: URL del sitio, cortar altas abiertas y poner el código en el mail.
 - [ ] 6. Sentry
 - [~] 7. Tests: aislamiento entre organizaciones y permisos por rol ✅ (`npm run test:db`, 12 tests contra dev). Falta el flujo de login con Playwright (después del paso 5).
 - [ ] 8. Deploy a Netlify (confirmar antes)

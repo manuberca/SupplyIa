@@ -156,3 +156,146 @@
   font-size: 14px;
   line-height: 1.4;
 }
+
+.app__contenido--sin-barra {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.local__nombre {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accesos--uno {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ─── Formularios ─── */
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formulario__ayuda {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--gris);
+}
+
+.formulario__ayuda strong {
+  color: var(--tinta);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo__etiqueta {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.campo input,
+.campo select {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.campo input:focus-visible,
+.campo select:focus-visible,
+.boton:focus-visible {
+  outline: 2px solid var(--petroleo);
+  outline-offset: 2px;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.boton--primario {
+  background: var(--petroleo);
+  color: var(--card);
+}
+
+.boton--secundario {
+  background: var(--card);
+  border-color: var(--linea);
+  color: var(--tinta);
+}
+
+.boton--texto {
+  min-height: 44px;
+  background: none;
+  color: var(--petroleo);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.aviso--error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.datos {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.datos div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--linea-suave);
+  font-size: 14px;
+}
+
+.datos div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.datos dt {
+  color: var(--gris);
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
