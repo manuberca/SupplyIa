@@ -1,19 +1,11 @@
-import { z } from 'zod'
+import { revisarConfig } from './config'
 
-const esquema = z.object({
-  VITE_SUPABASE_URL: z.url({ message: 'Falta VITE_SUPABASE_URL en .env.local' }),
-  VITE_SUPABASE_ANON_KEY: z
-    .string()
-    .min(20, { message: 'Falta VITE_SUPABASE_ANON_KEY en .env.local' }),
-})
+const resultado = revisarConfig(import.meta.env)
 
-const resultado = esquema.safeParse(import.meta.env)
-
-if (!resultado.success) {
-  // Error de configuración: mejor que la app no arranque a que falle más adelante sin explicación.
-  throw new Error(
-    'Configuración incompleta. ' + resultado.error.issues.map((i) => i.message).join(' · '),
-  )
+if (!resultado.ok) {
+  // main.tsx revisa la configuración antes de cargar la app y muestra qué falta;
+  // esto solo salta si algún módulo se importa por otro camino.
+  throw new Error('Configuración incompleta: ' + resultado.faltantes.join(' · '))
 }
 
-export const env = resultado.data
+export const env = resultado.config

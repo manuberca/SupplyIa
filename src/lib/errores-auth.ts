@@ -20,6 +20,9 @@ const MENSAJES: Record<string, string> = {
   user_banned: 'Tu usuario está suspendido. Hablá con quien administra tu bar.',
 }
 
+/** Cuando no reconocemos el error: estos conviene reportarlos. */
+export const ERROR_AUTH_DESCONOCIDO = 'No pudimos iniciar sesión. Probá de nuevo en un rato.'
+
 export const SIN_CONEXION = 'No hay conexión. Revisá la señal y probá de nuevo.'
 
 export function mensajeErrorAuth(error: ErrorAuth): string {
@@ -28,7 +31,7 @@ export function mensajeErrorAuth(error: ErrorAuth): string {
   // Sin código: Supabase responde así cuando el mail no existe y no se permiten altas.
   if (/signups? not allowed/i.test(error.message ?? '')) return SIN_ACCESO
   if (error.name === 'AuthRetryableFetchError' || error.status === 0) return SIN_CONEXION
-  return 'No pudimos iniciar sesión. Probá de nuevo en un rato.'
+  return ERROR_AUTH_DESCONOCIDO
 }
 
 /** Si el enlace del mail vuelve con error (vencido, ya usado), lo lee de la URL. */

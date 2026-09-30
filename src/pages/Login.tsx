@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { KeyRound, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { errorEnUrl, mensajeErrorAuth } from '../lib/errores-auth'
+import { ERROR_AUTH_DESCONOCIDO, errorEnUrl, mensajeErrorAuth } from '../lib/errores-auth'
+import { reportar } from '../lib/errores'
 import { Marca } from '../components/Marca'
 
 const emailSchema = z.email({ message: 'Revisá el mail: parece que está mal escrito.' })
@@ -11,6 +12,13 @@ const codigoSchema = z
   .regex(/^\d{6,10}$/, { message: 'El código son los números que te llegaron por mail.' })
 
 type Modo = 'clave' | 'codigo' | 'codigo_enviado'
+
+/** El mensaje para mostrar; si es un error que no conocemos, además se reporta. */
+function mensajeYReporte(error: Parameters<typeof mensajeErrorAuth>[0], accion: string): string {
+  const mensaje = mensajeErrorAuth(error)
+  if (mensaje === ERROR_AUTH_DESCONOCIDO) reportar(error, `Login: ${accion}`)
+  return mensaje
+}
 
 function limpiarUrl() {
   if (window.location.hash || window.location.search) {
@@ -48,7 +56,7 @@ export function Login() {
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email: mail, password: clave })
     setEnviando(false)
-    if (error) setError(mensajeErrorAuth(error))
+    if (error) setError(mensajeYReporte(error, 'contraseña'))
   }
 
   async function mandarCodigo(e?: FormEvent) {
@@ -62,7 +70,7 @@ export function Login() {
       options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
     })
     setEnviando(false)
-    if (error) return setError(mensajeErrorAuth(error))
+    if (error) return setError(mensajeYReporte(error, 'mandar código'))
     setModo('codigo_enviado')
   }
 
@@ -78,7 +86,7 @@ export function Login() {
       type: 'email',
     })
     setEnviando(false)
-    if (error) setError(mensajeErrorAuth(error))
+    if (error) setError(mensajeYReporte(error, 'verificar código'))
   }
 
   function cambiarModo(m: Modo) {

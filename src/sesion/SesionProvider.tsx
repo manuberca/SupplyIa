@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { supabase } from '../lib/supabase'
 import { rolSchema } from '../lib/permisos'
 import { SIN_CONEXION } from '../lib/errores-auth'
+import { identificar, reportar } from '../lib/errores'
 import { ContextoSesion, type Local, type Sesion, type ValorSesion } from './contexto'
 
 const CLAVE_LOCAL = 'supplyia.local'
@@ -36,8 +37,9 @@ async function cargarSesion(usuario: Usuario): Promise<Sesion> {
 
   const error = miembroRes.error ?? localesRes.error
   if (error) {
-    console.error('No se pudo cargar la sesión', error)
     const sinRed = !navigator.onLine || /fetch/i.test(error.message)
+    // Sin señal es esperable: se le avisa al usuario y no se reporta.
+    if (!sinRed) reportar(error, 'No se pudo cargar la sesión')
     return {
       estado: 'error',
       mensaje: sinRed ? SIN_CONEXION : 'No pudimos cargar los datos de tu bar. Probá de nuevo.',
@@ -51,7 +53,7 @@ async function cargarSesion(usuario: Usuario): Promise<Sesion> {
 
   const rol = rolSchema.safeParse(miembro.rol)
   if (!rol.success) {
-    console.error('Rol desconocido', miembro.rol)
+    reportar(new Error(`Rol desconocido: ${String(miembro.rol)}`), 'Cargar sesión')
     return {
       estado: 'error',
       mensaje: 'Tu usuario tiene un rol que la app no reconoce. Avisale a soporte.',
@@ -102,7 +104,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     let vigente = true
     cargarSesion(usuario)
       .catch((error: unknown): Sesion => {
-        console.error('Falla inesperada al cargar la sesión', error)
+        reportar(error, 'Falla inesperada al cargar la sesión')
         return { estado: 'error', mensaje: 'Algo falló al cargar tu bar. Probá de nuevo.' }
       })
       .then((s) => {
@@ -113,11 +115,20 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     }
   }, [usuario, claveActual])
 
+  // Para saber en Sentry con qué organización y rol pasó un error.
+  const lista = sesion.estado === 'lista' ? sesion : null
+  const usuarioId = lista?.usuario.id
+  const orgId = lista?.org.id
+  const rol = lista?.miembro.rol
+  useEffect(() => {
+    identificar(usuarioId && orgId && rol ? { usuarioId, orgId, rol } : null)
+  }, [usuarioId, orgId, rol])
+
   const salir = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
     if (error) {
       // Aunque falle avisarle al servidor, la sesión local se borra igual.
-      console.error('Error al cerrar sesión', error)
+      reportar(error, 'Error al cerrar sesión')
       await supabase.auth.signOut({ scope: 'local' })
     }
   }, [])

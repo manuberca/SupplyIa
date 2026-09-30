@@ -3,13 +3,13 @@ import { Marca } from './Marca'
 
 type Props = { titulo: string; children?: ReactNode; cargando?: boolean }
 
-/** Pantalla completa para "cargando", errores y usuarios sin acceso. */
+/** Pantalla completa para "cargando", errores y usuarios sin acceso. Anda también fuera del router. */
 export function PantallaEstado({ titulo, children, cargando }: Props) {
   return (
     <div className="app">
       <main className="app__contenido app__contenido--sin-barra" aria-busy={cargando}>
         <header className="encabezado">
-          <Marca />
+          <Marca sinEnlace />
         </header>
         <h1>{titulo}</h1>
         {children && <section className="card formulario">{children}</section>}
