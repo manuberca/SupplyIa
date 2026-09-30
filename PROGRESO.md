@@ -46,7 +46,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Cola sin conexión (`src/offline`): IndexedDB (`idb-keyval`), se sube sola al volver la señal, al volver a la app y cada 20 s; las rechazadas quedan con su error (reintentar o descartar). Aviso arriba: sin conexión / pendientes / con error. Sesión (localStorage) y catálogo y pedidos (IndexedDB) guardados en el celular: la app abre sin señal.
 - [x] Pantallas: Pedir (proveedores ordenados por próxima entrega, "Sin enviar" si hay borrador), Nuevo pedido (último precio y hace cuánto, − / +, unidad o presentación, estimado, observaciones, borrador guardado), Enviar por WhatsApp (enlace wa.me + texto para copiar), Pedidos (en curso / todos), Detalle (reenviar, copiar, no llegó, cancelar), Inicio con pedidos en curso.
 - [x] Tests: `npm test` 126, `npm run test:db` 42 (13 de pedidos), `npm run e2e` 13 (el de modo avión incluido). Probado también cerrar y abrir la app sin señal con el build de producción.
-- [ ] Migración en prod (confirmar antes), deploy y prueba en el celular en modo avión.
+- [x] Migración `pedidos` en prod (30/9, confirmado).
+- [ ] Deploy y prueba en el celular en modo avión.
 
 **Listo cuando:** un pedido hecho en modo avión se sube solo al volver la señal. ✅ en dev.
 
