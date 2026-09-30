@@ -83,7 +83,7 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 **Listo cuando:** los aumentos, el ranking y las alertas coinciden con una cuenta a mano. ✅ Cuenta independiente en Python sobre Bar Demo: Vinesco −1,7 %, Papelera +0,1 %, Quilmes +37,2 %, La Esperanza +3,4 %, idénticos a la app.
 
-## Etapa 6 — Administración (hecha en local)
+## Etapa 6 — Administración (lista para subir)
 
 - [x] Plan aprobado (30/9). El Excel se arma en el navegador (misma librería que la plantilla) en vez de una función de Netlify como dice la SPEC §10: mismo archivo, sin el corte de 26 s ni gasto de funciones.
 - [x] Migración `pagos` en **dev**: `pedidos.pagado_at`, lo pone la base al marcar pagado (no se puede escribir a mano).
@@ -92,7 +92,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Cambios de precio de menos de 0,1 % no cuentan (centavos de redondeo del remito).
 - [x] Usuario de prueba `admin-demo@supplyia.test` (Bar Demo, dev): `npm run db:datos-prueba` ahora deja listos `admin-demo` y `encargado-demo` si existe Bar Demo.
 - [x] Tests: `npm test` 174, `npm run test:db` 53, `npm run e2e` 17 (el nuevo baja el Excel, lo lee y compara con la pantalla, reclama una diferencia y marca un pago).
-- [ ] Migración `pagos` en prod (pedir confirmación) y deploy junto con lo pendiente.
+- [x] Migración `pagos` en prod (30/9, confirmado).
+- [ ] Deploy (push) y probar el panel en https://supplyia.netlify.app/admin.
 
 **Listo cuando** (propuesto en el plan): el resumen de septiembre de Bar Demo coincide con una cuenta a mano y el Excel tiene los mismos números. ✅ Cuenta independiente en SQL sobre Bar Demo: $39.665.610,40 en 91 recepciones de 19 proveedores; Vinesco $6.779.591, Juanchi $5.642.856, La Esperanza $5.437.164, Quilmes $4.946.929, Cook Express $3.965.048: idéntico al panel. El Excel lo verifica el test e2e.
 
