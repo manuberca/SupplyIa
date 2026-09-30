@@ -6,6 +6,7 @@ describe('permisos por rol', () => {
     for (const s of [
       'inicio',
       'pedir',
+      'pedidos',
       'recibir',
       'proveedores',
       'precios',
@@ -26,6 +27,7 @@ describe('permisos por rol', () => {
     expect(puede('recepcion', 'inicio')).toBe(true)
     expect(puede('recepcion', 'recibir')).toBe(true)
     expect(puede('recepcion', 'cuenta')).toBe(true)
+    expect(puede('recepcion', 'pedidos')).toBe(true)
     expect(puede('recepcion', 'pedir')).toBe(false)
     expect(puede('recepcion', 'proveedores')).toBe(false)
     expect(puede('recepcion', 'precios')).toBe(false)

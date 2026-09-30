@@ -3,6 +3,7 @@ import { Settings } from 'lucide-react'
 import { BarraInferior } from './BarraInferior'
 import { Marca } from './Marca'
 import { useSesionLista } from '../sesion/contexto'
+import { EstadoConexion } from '../offline/EstadoConexion'
 
 export function Estructura() {
   const { local, org } = useSesionLista()
@@ -18,6 +19,7 @@ export function Estructura() {
             <Settings size={15} strokeWidth={2} aria-hidden="true" />
           </Link>
         </header>
+        <EstadoConexion />
         <Outlet />
       </main>
       <BarraInferior />

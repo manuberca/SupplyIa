@@ -709,3 +709,197 @@ a.boton {
   outline: 2px solid var(--petroleo);
   outline-offset: 2px;
 }
+
+/* ─── Pedidos (etapa 3) ─── */
+
+.boton--enviar {
+  background: var(--amarillo);
+  color: var(--tinta);
+}
+
+.boton--enviar[aria-disabled='true'] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pastilla--info {
+  background: var(--petroleo-suave);
+  color: var(--petroleo);
+}
+
+.pastilla--atencion {
+  background: var(--aviso-bg);
+  color: var(--aviso);
+}
+
+.cabecera-proveedor {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  background: var(--petroleo-suave);
+}
+
+.cabecera-proveedor__nombre {
+  margin: 2px 0;
+  font-size: 19px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.cabecera-proveedor__detalle {
+  font-size: 13px;
+  color: var(--gris);
+}
+
+.producto-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--linea-suave);
+}
+
+.producto-pedido:first-child {
+  border-top: 0;
+}
+
+.producto-pedido__fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.producto-pedido__precio {
+  font-family: var(--fuente-mono);
+  font-size: 12px;
+  color: var(--gris);
+}
+
+.stepper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.stepper[data-activo='true'] {
+  border: 2px solid var(--petroleo);
+}
+
+.stepper button {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  color: var(--linea);
+  cursor: default;
+}
+
+.stepper input {
+  width: 48px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: center;
+  font-family: var(--fuente-mono);
+  font-weight: 700;
+}
+
+.stepper__unidad {
+  padding-right: 2px;
+  font-family: var(--fuente-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stepper input:focus-visible,
+.stepper button:focus-visible {
+  outline: 2px solid var(--petroleo);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+
+.chips--chicos .chip {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.resumen-pedido {
+  position: sticky;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--card);
+  box-shadow: 0 -4px 16px color-mix(in srgb, var(--tinta) 8%, transparent);
+}
+
+.resumen-pedido__fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.resumen-pedido__total {
+  font-family: var(--fuente-mono);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.mensaje-whatsapp {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--fondo);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.conexion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.conexion--sin-senal {
+  background: var(--aviso-bg);
+  color: var(--aviso);
+}
+
+.conexion--subiendo {
+  background: var(--petroleo-suave);
+  color: var(--petroleo);
+}
+
+.conexion--error {
+  background: var(--error-bg);
+  color: var(--error);
+}

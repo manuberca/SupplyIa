@@ -4,11 +4,12 @@ export const rolSchema = z.enum(['admin', 'encargado', 'recepcion'])
 export type Rol = z.infer<typeof rolSchema>
 
 export type Seccion =
-  'inicio' | 'pedir' | 'recibir' | 'proveedores' | 'precios' | 'cuenta' | 'ajustes_org'
+  'inicio' | 'pedir' | 'pedidos' | 'recibir' | 'proveedores' | 'precios' | 'cuenta' | 'ajustes_org'
 
 // SPEC.md §2. Recepción solo recibe mercadería y ve pedidos en curso (en Inicio).
 const PERMISOS: Record<Seccion, readonly Rol[]> = {
   inicio: ['admin', 'encargado', 'recepcion'],
+  pedidos: ['admin', 'encargado', 'recepcion'], // ver los pedidos en curso
   recibir: ['admin', 'encargado', 'recepcion'],
   cuenta: ['admin', 'encargado', 'recepcion'],
   pedir: ['admin', 'encargado'],

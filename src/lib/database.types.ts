@@ -168,6 +168,132 @@ export type Database = {
         }
         Relationships: []
       }
+      pedido_items: {
+        Row: {
+          cantidad: number
+          cantidad_base: number
+          id: string
+          org_id: string
+          pedido_id: string
+          precio_estimado_base: number | null
+          presentacion_id: string | null
+          producto_id: string
+        }
+        Insert: {
+          cantidad: number
+          cantidad_base: number
+          id: string
+          org_id: string
+          pedido_id: string
+          precio_estimado_base?: number | null
+          presentacion_id?: string | null
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          cantidad_base?: number
+          id?: string
+          org_id?: string
+          pedido_id?: string
+          precio_estimado_base?: number | null
+          presentacion_id?: string | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'pedido_items_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'pedido_items_pedido_id_fkey'
+            columns: ['pedido_id']
+            isOneToOne: false
+            referencedRelation: 'pedidos'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'pedido_items_presentacion_id_fkey'
+            columns: ['presentacion_id']
+            isOneToOne: false
+            referencedRelation: 'presentaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'pedido_items_producto_id_fkey'
+            columns: ['producto_id']
+            isOneToOne: false
+            referencedRelation: 'productos'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          creado_at: string
+          creado_por: string
+          enviado_at: string | null
+          estado: string
+          id: string
+          local_id: string
+          numero: number
+          observaciones: string | null
+          org_id: string
+          proveedor_id: string
+          subido_at: string
+        }
+        Insert: {
+          creado_at?: string
+          creado_por?: string
+          enviado_at?: string | null
+          estado?: string
+          id: string
+          local_id: string
+          numero: number
+          observaciones?: string | null
+          org_id: string
+          proveedor_id: string
+          subido_at?: string
+        }
+        Update: {
+          creado_at?: string
+          creado_por?: string
+          enviado_at?: string | null
+          estado?: string
+          id?: string
+          local_id?: string
+          numero?: number
+          observaciones?: string | null
+          org_id?: string
+          proveedor_id?: string
+          subido_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'pedidos_local_id_fkey'
+            columns: ['local_id']
+            isOneToOne: false
+            referencedRelation: 'locales'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'pedidos_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'pedidos_proveedor_id_fkey'
+            columns: ['proveedor_id']
+            isOneToOne: false
+            referencedRelation: 'proveedores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       precios: {
         Row: {
           fecha: string
@@ -427,6 +553,7 @@ export type Database = {
       }
     }
     Functions: {
+      guardar_pedido: { Args: { pedido: Json }; Returns: Json }
       importar_catalogo: { Args: { datos: Json }; Returns: Json }
     }
     Enums: {

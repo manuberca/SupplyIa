@@ -2,11 +2,22 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { supabase } from '../lib/supabase'
 import { reportar } from '../lib/errores'
 import { SIN_CONEXION } from '../lib/errores-auth'
+import { guardar, leer } from '../offline/almacen'
+import { useSesionLista } from '../sesion/contexto'
 import { ContextoCatalogo, type EstadoCatalogo, type ValorCatalogo } from './contexto'
 import type { Catalogo, TipoUnidad, UltimoPrecio } from './tipos'
 
+// En el celular se guarda una copia para poder pedir sin señal (SPEC §8).
+type CopiaCatalogo = Omit<Catalogo, 'precios'> & { precios: UltimoPrecio[] }
+
+const aCopia = (c: Catalogo): CopiaCatalogo => ({ ...c, precios: [...c.precios.values()] })
+const deCopia = (c: CopiaCatalogo): Catalogo => ({
+  ...c,
+  precios: new Map(c.precios.map((p) => [p.producto_id, p])),
+})
+
 // El catálogo de un bar son decenas o cientos de filas: se carga entero una vez y se
-// recarga después de cada cambio. En la etapa 3 se guarda también en el celular para pedir sin señal.
+// recarga después de cada cambio.
 async function cargar(): Promise<EstadoCatalogo> {
   const [unidades, proveedores, productos, presentaciones, precios] = await Promise.all([
     supabase.from('unidades').select('id, nombre, tipo, archivada').order('nombre'),
@@ -51,34 +62,48 @@ async function cargar(): Promise<EstadoCatalogo> {
   return { estado: 'listo', catalogo }
 }
 
+const cargarSeguro = () =>
+  cargar().catch((error: unknown): EstadoCatalogo => {
+    reportar(error, 'Falla inesperada al cargar el catálogo')
+    return { estado: 'error', mensaje: 'Algo falló al cargar el catálogo. Probá de nuevo.' }
+  })
+
 export function CatalogoProvider({ children }: { children: ReactNode }) {
+  const { org } = useSesionLista()
+  const clave = `catalogo:${org.id}`
   const [catalogo, setCatalogo] = useState<EstadoCatalogo>({ estado: 'cargando' })
 
-  const recargar = useCallback(async () => {
-    const nuevo = await cargar().catch((error: unknown): EstadoCatalogo => {
-      reportar(error, 'Falla inesperada al cargar el catálogo')
-      return { estado: 'error', mensaje: 'Algo falló al cargar el catálogo. Probá de nuevo.' }
-    })
-    // Si ya había catálogo y falla una recarga, se sigue mostrando el que había.
-    setCatalogo((previo) =>
-      nuevo.estado === 'error' && previo.estado === 'listo' ? previo : nuevo,
-    )
-  }, [])
+  // Si ya había catálogo y falla una recarga (por ejemplo, sin señal), se sigue mostrando el que había.
+  const aplicar = useCallback(
+    (nuevo: EstadoCatalogo) => {
+      setCatalogo((previo) =>
+        nuevo.estado === 'error' && previo.estado === 'listo' ? previo : nuevo,
+      )
+      if (nuevo.estado === 'listo') void guardar(clave, aCopia(nuevo.catalogo))
+    },
+    [clave],
+  )
+
+  const recargar = useCallback(async () => aplicar(await cargarSeguro()), [aplicar])
 
   useEffect(() => {
     let vigente = true
-    cargar()
-      .catch((error: unknown): EstadoCatalogo => {
-        reportar(error, 'Falla inesperada al cargar el catálogo')
-        return { estado: 'error', mensaje: 'Algo falló al cargar el catálogo. Probá de nuevo.' }
-      })
-      .then((c) => {
-        if (vigente) setCatalogo(c)
-      })
+    // Primero la copia del celular (abre al instante y sin señal); después, la de la base.
+    leer<CopiaCatalogo>(clave).then((copia) => {
+      if (vigente && copia) {
+        setCatalogo((previo) =>
+          // Sin señal el error de la base puede llegar antes que la copia: la copia gana.
+          previo.estado === 'listo' ? previo : { estado: 'listo', catalogo: deCopia(copia) },
+        )
+      }
+    })
+    cargarSeguro().then((c) => {
+      if (vigente) aplicar(c)
+    })
     return () => {
       vigente = false
     }
-  }, [])
+  }, [clave, aplicar])
 
   const valor = useMemo<ValorCatalogo>(() => ({ catalogo, recargar }), [catalogo, recargar])
   return <ContextoCatalogo.Provider value={valor}>{children}</ContextoCatalogo.Provider>

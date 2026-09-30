@@ -1,6 +1,10 @@
 import { Link } from 'react-router'
 import { ClipboardList, ScanLine } from 'lucide-react'
+import { EsperarCatalogo } from '../catalogo/EsperarCatalogo'
 import { puede } from '../lib/permisos'
+import { usePedidos } from '../pedidos/contexto'
+import { FilasPedidos } from '../pedidos/FilasPedidos'
+import { EN_CURSO } from '../pedidos/tipos'
 import { useSesionLista } from '../sesion/contexto'
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -53,6 +57,34 @@ export function Inicio() {
           </div>
         </Link>
       </div>
+
+      <PedidosEnCurso />
+    </>
+  )
+}
+
+function PedidosEnCurso() {
+  const { pedidos, estado } = usePedidos()
+  const enCurso = pedidos.filter((p) => p.subida || EN_CURSO.includes(p.estado))
+  if (estado === 'cargando' || (estado === 'error' && enCurso.length === 0)) return null
+
+  return (
+    <>
+      <div className="seccion-encabezado">
+        <h2>Pedidos en curso</h2>
+        <Link to="/pedidos" className="enlace-accion">
+          Ver todos
+        </Link>
+      </div>
+      <EsperarCatalogo>
+        {(catalogo) => (
+          <FilasPedidos
+            pedidos={enCurso.slice(0, 4)}
+            catalogo={catalogo}
+            vacia="No hay pedidos en curso."
+          />
+        )}
+      </EsperarCatalogo>
     </>
   )
 }

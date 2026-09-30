@@ -25,6 +25,27 @@ function guardarLocal(id: string) {
 
 type Usuario = { id: string; email: string }
 
+// Copia de la última sesión cargada, para poder abrir la app sin señal (SPEC §8).
+const claveCopia = (userId: string) => `supplyia.sesion:${userId}`
+
+function guardarCopia(sesion: Sesion) {
+  if (sesion.estado !== 'lista') return
+  try {
+    localStorage.setItem(claveCopia(sesion.usuario.id), JSON.stringify(sesion))
+  } catch {
+    // Sin almacenamiento: sin señal no se podrá abrir, pero con señal anda igual.
+  }
+}
+
+function leerCopia(userId: string): Sesion | null {
+  try {
+    const texto = localStorage.getItem(claveCopia(userId))
+    return texto ? (JSON.parse(texto) as Sesion) : null
+  } catch {
+    return null
+  }
+}
+
 async function cargarSesion(usuario: Usuario): Promise<Sesion> {
   const [miembroRes, localesRes] = await Promise.all([
     supabase
@@ -38,7 +59,12 @@ async function cargarSesion(usuario: Usuario): Promise<Sesion> {
   const error = miembroRes.error ?? localesRes.error
   if (error) {
     const sinRed = !navigator.onLine || /fetch/i.test(error.message)
-    // Sin señal es esperable: se le avisa al usuario y no se reporta.
+    // Sin señal es esperable: se usa la última sesión guardada, o se avisa. No se reporta.
+    const copia = sinRed ? leerCopia(usuario.id) : null
+    if (copia?.estado === 'lista') {
+      const local = copia.locales.find((l) => l.id === leerLocalGuardado()) ?? copia.local
+      return { ...copia, local }
+    }
     if (!sinRed) reportar(error, 'No se pudo cargar la sesión')
     return {
       estado: 'error',
@@ -64,7 +90,7 @@ async function cargarSesion(usuario: Usuario): Promise<Sesion> {
   const guardado = leerLocalGuardado()
   const local = locales.find((l) => l.id === guardado) ?? locales[0] ?? null
 
-  return {
+  const lista: Sesion = {
     estado: 'lista',
     usuario,
     miembro: { nombre: miembro.nombre, rol: rol.data },
@@ -72,6 +98,8 @@ async function cargarSesion(usuario: Usuario): Promise<Sesion> {
     locales,
     local,
   }
+  guardarCopia(lista)
+  return lista
 }
 
 export function SesionProvider({ children }: { children: ReactNode }) {
