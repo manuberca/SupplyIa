@@ -16,9 +16,9 @@ Se actualiza al terminar cada paso, así cualquier computadora sabe dónde segui
 - [~] 8. Deploy a Netlify: `netlify.toml` listo (build, caché del service worker, encabezados de seguridad; la redirección de la SPA está en `public/_redirects`). Pasos pendientes, en orden:
   1. ✅ `supplyia-prod` creado (ref `xrdujgrbmjgtcwxrkqer`, São Paulo, plan gratis). Contraseña de la base: `SUPABASE_PROD_DB_PASSWORD` en `.env.local` y en el gestor de contraseñas.
   2. ✅ Migración `base` aplicada en prod (30/9): 4 tablas con RLS y políticas, verificado. La CLI quedó linkeada de nuevo a dev.
-  3. Auth de prod: ✅ altas cerradas (probado: `signup_disabled`) y código de 6 dígitos. Falta: URL del sitio = la de Netlify (hoy dice localhost:5173).
-  4. Netlify: nuevo sitio desde GitHub, rama `main`, sin deploy previews. Variables: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` de **prod**, `VITE_SENTRY_DSN`. (`SUPABASE_SERVICE_ROLE_KEY` y `ANTHROPIC_API_KEY` recién cuando haya funciones.)
-  5. Antes de publicar: `npm run lint && npm test && npm run test:db && npm run e2e && npm run build`.
+  3. ✅ Auth de prod: altas cerradas (probado: `signup_disabled`), código de 6 dígitos y URL del sitio https://supplyia.netlify.app. Lo propio de prod está en `[remotes.prod]` de `supabase/config.toml`; se aplica con `npx supabase config push --project-ref xrdujgrbmjgtcwxrkqer` (sin re-linkear).
+  4. ✅ Netlify: https://supplyia.netlify.app, desde GitHub, rama `main`. Variables de prod cargadas (copia local en `.env.prod.local`, ignorado por git). Tiene protección de acceso de Netlify (solo entra quien tiene sesión en Netlify): sacarla antes del piloto. Falta: desactivar deploy previews.
+  5. ✅ Revisión completa antes del primer deploy (30/9). Repetirla antes de cada push a `main`: `npm run lint && npm test && npm run test:db && npm run e2e && npm run build`. **Cada push a `main` deploya y gasta créditos.**
   6. Crear la organización real y el primer admin en prod (por invitación desde el servidor).
 
 **Listo cuando:** dos organizaciones de prueba no ven los datos de la otra.
