@@ -221,6 +221,9 @@ function FilaRecepcion({
       {abierta && (
         <tr className="tabla__detalle">
           <td colSpan={7}>
+            {x.observaciones && (
+              <p className="aviso aviso--atencion detalle-recepcion__aviso">{x.observaciones}</p>
+            )}
             <div className="detalle-recepcion">
               <table className="tabla tabla--chica">
                 <thead>

@@ -14,6 +14,7 @@ export type RecepcionPanel = {
   total_remito: number | null
   origen: string
   foto_path: string | null
+  observaciones: string | null
   items: {
     producto_id: string | null
     cantidad_pedida_base: number | null

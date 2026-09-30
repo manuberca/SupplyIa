@@ -29,6 +29,7 @@ import {
   type ProductoConciliable,
   type RenglonRemito,
 } from '../../recepcion/conciliar'
+import { chequearCuentas } from '../../recepcion/cuentas'
 import { comprimirFoto, type FotoLista } from '../../recepcion/foto'
 import type { Lectura } from '../../recepcion/lectura'
 import { leerRemito, subirFoto } from '../../recepcion/leer'
@@ -92,6 +93,8 @@ function Recepcion({
   const [duplicado, setDuplicado] = useState<string | null>(null)
   const [renglones, setRenglones] = useState<RenglonRemito[]>([])
   const [nroRemito, setNroRemito] = useState('')
+  // El total que dice la boleta (distinto de la suma de precios unitarios: puede traer IVA).
+  const [totalBoleta, setTotalBoleta] = useState('')
   const [correcciones, setCorrecciones] = useState<Correccion[]>([])
   const [editando, setEditando] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -147,6 +150,17 @@ function Recepcion({
     [productos, pedido, renglones, catalogo.ajustes, proveedor.umbral_alerta_pct, cuentasOk],
   )
 
+  const total = leerNumero(totalBoleta)
+  const cuentas = chequearCuentas(
+    conciliacion.filas
+      .filter((f) => f.productoId)
+      .map((f) => ({ cantidad: f.llegoBase, precio: f.precioBase })),
+    total !== null && total > 0 ? total : null,
+  )
+  // Como en La Bodeguita: si falta el total o no cierra, el pedido queda para revisar antes de pagar.
+  const estadoPedido: 'a_pagar' | 'revisar' =
+    conciliacion.estadoPedido === 'a_pagar' && cuentas.estado === 'ok' ? 'a_pagar' : 'revisar'
+
   // ─── Paso 1: la foto, o a mano ─────────────────────────────────────────
   async function alElegirFoto(e: ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0]
@@ -171,6 +185,7 @@ function Recepcion({
     setLectura(r.lectura)
     setOrigen('ia')
     setNroRemito(r.lectura.nroRemito ?? '')
+    setTotalBoleta(r.lectura.totales.total ? numero(r.lectura.totales.total, 2) : '')
     setDuplicado(r.duplicado ? r.duplicado.recibidoAt : null)
     setRenglones(
       r.lectura.lineas.map((l) => ({
@@ -296,15 +311,15 @@ function Recepcion({
       local_id: local.id,
       proveedor_id: proveedor.id,
       pedido_id: pedido?.id ?? null,
-      estado_pedido: pedido ? c.estadoPedido : null,
+      estado_pedido: pedido ? estadoPedido : null,
       origen,
       recibido_at: recibidoAt,
       foto_path: fotoPath,
       nro_remito: nroRemito.trim() || null,
       fecha_remito: fechaIso(lectura?.fecha ?? null),
-      total_remito: lectura?.totales.total ?? (c.totalRemito || null),
+      total_remito: total !== null && total > 0 ? total : null,
       lectura_ia: lectura,
-      observaciones: '',
+      observaciones: cuentas.alertas.join(' ').slice(0, 500),
       items: c.filas.map((f) => ({
         id: crypto.randomUUID(),
         producto_id: f.productoId,
@@ -363,7 +378,7 @@ function Recepcion({
           <p className="aviso aviso--ok" role="status">
             <CheckCircle2 size={16} aria-hidden="true" /> <strong>Listo.</strong>{' '}
             {pedido
-              ? conciliacion.estadoPedido === 'a_pagar'
+              ? estadoPedido === 'a_pagar'
                 ? 'El pedido quedó a pagar.'
                 : 'El pedido quedó para revisar.'
               : 'Se guardaron los precios.'}
@@ -610,32 +625,61 @@ function Recepcion({
         </label>
       )}
 
-      <label className="campo">
-        <span className="campo__etiqueta">Número de remito</span>
-        <input
-          className="mono"
-          value={nroRemito}
-          onChange={(e) => setNroRemito(e.target.value)}
-          placeholder="0001-00012345"
-        />
-      </label>
-
-      <section className="card totales-recepcion">
-        <div>
-          <div className="lista__titulo">Total del remito</div>
-          {conciliacion.totalPedidoEstimado !== null && (
-            <div className="lista__detalle">
-              Pediste por {pesos(conciliacion.totalPedidoEstimado)}
-            </div>
-          )}
+      <section className="card formulario" aria-label="Boleta">
+        <div className="lista__titulo">Boleta</div>
+        <div className="boleta-campos">
+          <label className="campo">
+            <span className="campo__etiqueta">Número de boleta o remito</span>
+            <input
+              className="mono"
+              value={nroRemito}
+              onChange={(e) => setNroRemito(e.target.value)}
+              placeholder="0001-00012345"
+            />
+          </label>
+          <label className="campo">
+            <span className="campo__etiqueta">Total de la boleta</span>
+            <input
+              className="mono"
+              inputMode="decimal"
+              value={totalBoleta}
+              onChange={(e) => setTotalBoleta(e.target.value)}
+              placeholder="$ total"
+              aria-invalid={totalBoleta.trim() !== '' && total === null}
+            />
+          </label>
         </div>
-        <div className="totales-recepcion__total">
-          {lectura?.totales.total
-            ? pesos(lectura.totales.total)
-            : conciliacion.totalRemito
-              ? pesos(conciliacion.totalRemito)
-              : '—'}
+        <div className="totales-recepcion">
+          <div>
+            <div className="lista__detalle">Suma de los renglones</div>
+            {conciliacion.totalPedidoEstimado !== null && (
+              <div className="lista__detalle">
+                Pediste por {pesos(conciliacion.totalPedidoEstimado)}
+              </div>
+            )}
+          </div>
+          <div className="totales-recepcion__total">{pesos(cuentas.suma)}</div>
         </div>
+        {totalBoleta.trim() !== '' && total === null && (
+          <p className="campo__ayuda campo__ayuda--error">
+            El total tiene que ser un número, por ejemplo 12.500,50.
+          </p>
+        )}
+        {cuentas.alertas.length > 0 && (
+          <p className="aviso aviso--atencion" role="status">
+            <TriangleAlert size={16} aria-hidden="true" /> {cuentas.alertas.join(' ')}
+            {pedido && ' El pedido va a quedar para revisar antes de pagar.'}
+          </p>
+        )}
+        {cuentas.nota && <p className="aviso aviso--ok">{cuentas.nota}</p>}
+        {cuentas.sinPrecio > 0 && (
+          <p className="aviso aviso--atencion">
+            {cuentas.sinPrecio === 1
+              ? '1 producto sin precio.'
+              : `${cuentas.sinPrecio} productos sin precio.`}{' '}
+            Cargarlos es lo que permite detectar si un proveedor te aumenta.
+          </p>
+        )}
       </section>
 
       {error && (

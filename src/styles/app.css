@@ -1796,3 +1796,18 @@ a.boton {
   border-radius: 0;
   padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
 }
+
+/* Boleta en la recepción: número y total, como en La Bodeguita. */
+.boleta-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.boleta-campos + .totales-recepcion .totales-recepcion__total {
+  font-size: 18px;
+}
+
+.detalle-recepcion__aviso {
+  margin: 12px 20px 0;
+}

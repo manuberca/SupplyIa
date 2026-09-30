@@ -20,6 +20,7 @@ const recepcion = (p: Partial<RecepcionPanel>): RecepcionPanel => ({
   total_remito: null,
   origen: 'manual',
   foto_path: null,
+  observaciones: null,
   items: [],
   diferencias: [],
   ...p,

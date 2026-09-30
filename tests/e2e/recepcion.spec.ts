@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
+import { leerNumero, numero } from '../../src/lib/formato'
 import type { RespuestaLectura } from '../../src/recepcion/lectura'
 import { LOCALES, USUARIOS } from '../db/datos'
 
@@ -191,6 +192,8 @@ test('con la IA: lee el remito, marca el aumento y el faltante, y el pedido qued
   await page.getByLabel('Foto del remito').setInputFiles(await foto(page))
 
   await expect(page.getByText('Leído con IA · cuentas verificadas')).toBeVisible()
+  // El total que leyó la IA queda en la boleta (se puede corregir a mano).
+  await expect(page.getByLabel('Total de la boleta')).toHaveValue('242.120')
   expect(pedidoAlLector).toMatchObject({ proveedorId: ids.proveedor, tipo: 'image/jpeg' })
   await expect(page.getByText('Correcto · dentro del 10% de tolerancia en peso')).toBeVisible()
   await expect(page.getByText('Subió 9,3% · antes $11.800/kg')).toBeVisible()
@@ -277,4 +280,43 @@ test('si la IA falla, se carga a mano; y sin señal se confirma igual y se sube 
     .toBe('revisar')
   const { data } = await db.from('recepciones').select('origen').eq('pedido_id', pedidoId).single()
   expect(data?.origen).toBe('manual')
+})
+
+test('a mano: el total de la boleta se carga aparte del precio unitario, y con IVA cierra', async ({
+  page,
+}) => {
+  const pedidoId = await nuevoPedido()
+  await entrarComoRecepcion(page)
+  await page.goto(`/recibir/pedido/${pedidoId}`)
+  await page.getByRole('button', { name: 'Cargar a mano' }).click()
+
+  // Sin total, avisa (como en La Bodeguita) y el pedido quedaría para revisar.
+  await expect(page.getByText('Falta cargar el total de la boleta.')).toBeVisible()
+
+  // El total de la boleta trae IVA: es distinto de la suma de precios unitarios, y cierra.
+  const suma = leerNumero(await page.locator('.totales-recepcion__total').innerText())!
+  const totalConIva = Math.round(suma * 1.21 * 100) / 100
+  await page.getByLabel('Número de boleta o remito').fill(`0001-${Date.now() % 1e8}`)
+  await page.getByLabel('Total de la boleta').fill(numero(totalConIva, 2))
+  await expect(page.getByText('la diferencia es el IVA, las cuentas cierran')).toBeVisible()
+  await expect(page.getByText('Falta cargar el total de la boleta.')).toHaveCount(0)
+  await captura(page, 'r5-total-boleta')
+  await page.getByRole('button', { name: 'Confirmar' }).click()
+  await expect(page.getByText('El pedido quedó a pagar.')).toBeVisible()
+
+  await expect
+    .poll(
+      async () =>
+        (await db.from('pedidos').select('estado').eq('id', pedidoId).single()).data?.estado,
+      { timeout: 30_000 },
+    )
+    .toBe('a_pagar')
+  const { data } = await db
+    .from('recepciones')
+    .select('total_remito, recepcion_items ( precio_unit_base )')
+    .eq('pedido_id', pedidoId)
+    .single()
+  expect(Number(data?.total_remito)).toBe(totalConIva)
+  // Los precios unitarios quedan como se cargaron (sin IVA), aparte del total.
+  expect(data?.recepcion_items.every((i) => Number(i.precio_unit_base) < totalConIva)).toBe(true)
 })

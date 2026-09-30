@@ -36,7 +36,7 @@ export async function cargarPanel(f: Filtros): Promise<DatosPanel | { error: str
       let q = supabase
         .from('recepciones')
         .select(
-          'id, local_id, proveedor_id, pedido_id, recibido_at, nro_remito, total_remito, origen, foto_path, pedidos ( numero ), recepcion_items ( producto_id, cantidad_pedida_base, cantidad_base, precio_unit_base, subtotal, resultado ), diferencias ( id, producto_id, tipo, monto, detalle, estado )',
+          'id, local_id, proveedor_id, pedido_id, recibido_at, nro_remito, total_remito, origen, foto_path, observaciones, pedidos ( numero ), recepcion_items ( producto_id, cantidad_pedida_base, cantidad_base, precio_unit_base, subtotal, resultado ), diferencias ( id, producto_id, tipo, monto, detalle, estado )',
         )
         .gte('recibido_at', desde)
         .lt('recibido_at', hasta)

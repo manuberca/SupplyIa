@@ -47,6 +47,7 @@ describe('hojasDelPanel', () => {
           total_remito: 58000,
           origen: 'ia',
           foto_path: null,
+          observaciones: null,
           items: [
             {
               producto_id: 'tomate',

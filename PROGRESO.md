@@ -97,6 +97,14 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 **Listo cuando** (propuesto en el plan): el resumen de septiembre de Bar Demo coincide con una cuenta a mano y el Excel tiene los mismos números. ✅ Cuenta independiente en SQL sobre Bar Demo: $39.665.610,40 en 91 recepciones de 19 proveedores; Vinesco $6.779.591, Juanchi $5.642.856, La Esperanza $5.437.164, Quilmes $4.946.929, Cook Express $3.965.048: idéntico al panel. El Excel lo verifica el test e2e.
 
+## Etapa 7 — Piloto (en curso)
+
+- [x] Protección de acceso de Netlify sacada (30/9): contestaba 401 al pedir la versión nueva y la app instalada seguía en la etapa 1 sin avisar. La app se protege sola (login, altas cerradas, RLS).
+- [x] La app avisa si no puede bajar la versión nueva (y lo reporta a Sentry), muestra la versión en Ajustes, y explica qué hacer si el link del mail se abre en otro navegador.
+- [x] Total de la boleta, como en La Bodeguita: son dos cosas distintas del precio unitario de cada producto. Se carga a mano o lo completa la IA; se controla contra la suma de renglones (acepta IVA 10,5 % / 21 % o tasas mezcladas, avisa si falta, si no cierra o si un precio parece por caja). Si falta o no cierra, el pedido queda para revisar y el motivo se ve en el pedido y en el panel. Pagos usa ese total.
+- [x] Tests: `npm test` 182, `npm run e2e` 18.
+- [ ] Usuarios y locales desde Ajustes, alta de clientes, SMTP (Resend). Plan pendiente de OK.
+
 ## Datos en dev
 
 - Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano.

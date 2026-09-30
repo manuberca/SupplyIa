@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ESTADOS_DIFERENCIA } from '../../admin/estados'
 import { supabase } from '../../lib/supabase'
 import { reportar } from '../../lib/errores'
 import { SIN_CONEXION } from '../../lib/errores-auth'
@@ -21,15 +22,11 @@ type Recepcion = {
   nro_remito: string | null
   total_remito: number | null
   origen: string
+  observaciones: string | null
   diferencias: Diferencia[]
 }
 
-const ESTADOS_DIFERENCIA: Record<string, { texto: string; clase: string }> = {
-  pendiente: { texto: 'Pendiente', clase: 'pastilla--error' },
-  reclamado: { texto: 'Reclamado', clase: 'pastilla--atencion' },
-  nota_credito: { texto: 'Nota de crédito', clase: 'pastilla--info' },
-  resuelto: { texto: 'Resuelto', clase: 'pastilla--ok' },
-}
+const ESTADOS: Record<string, { texto: string; clase: string }> = ESTADOS_DIFERENCIA
 
 /** Lo que llegó de un pedido: remito, total y diferencias (con su seguimiento). */
 export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; version: number }) {
@@ -41,7 +38,7 @@ export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; ve
     const { data, error: e } = await supabase
       .from('recepciones')
       .select(
-        'id, recibido_at, nro_remito, total_remito, origen, diferencias ( id, tipo, monto, detalle, estado )',
+        'id, recibido_at, nro_remito, total_remito, origen, observaciones, diferencias ( id, tipo, monto, detalle, estado )',
       )
       .eq('pedido_id', pedidoId)
       .order('recibido_at', { ascending: false })
@@ -103,7 +100,7 @@ export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; ve
               <dd className="mono">{r.nro_remito ?? '—'}</dd>
             </div>
             <div>
-              <dt>Total del remito</dt>
+              <dt>Total de la boleta</dt>
               <dd className="mono">{r.total_remito !== null ? pesos(r.total_remito) : '—'}</dd>
             </div>
             <div>
@@ -111,11 +108,12 @@ export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; ve
               <dd>{r.origen === 'ia' ? 'Leído con IA' : 'A mano'}</dd>
             </div>
           </dl>
+          {r.observaciones && <p className="aviso aviso--atencion">{r.observaciones}</p>}
           {r.diferencias.length === 0 ? (
             <p className="aviso aviso--ok">Llegó todo bien.</p>
           ) : (
             r.diferencias.map((d) => {
-              const estado = ESTADOS_DIFERENCIA[d.estado] ?? ESTADOS_DIFERENCIA.pendiente!
+              const estado = ESTADOS[d.estado] ?? ESTADOS.pendiente!
               return (
                 <div key={d.id} className="grupo">
                   <p className="formulario__ayuda">
