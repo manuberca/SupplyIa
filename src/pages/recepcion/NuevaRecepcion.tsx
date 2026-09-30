@@ -119,9 +119,10 @@ function Recepcion({
     return mapa
   }, [catalogo, proveedor.id])
 
-  const cuentasOk = useMemo(() => {
-    if (origen !== 'ia' || !lectura) return true
-    const v = validarRemito(
+  // Con IA: control renglón por renglón (el total lo controla chequearCuentas, más abajo).
+  const validacionRenglones = useMemo(() => {
+    if (origen !== 'ia' || !lectura) return null
+    return validarRemito(
       renglones.map((r) => ({
         texto: r.texto,
         cantidad: r.cantidad,
@@ -133,9 +134,10 @@ function Recepcion({
         observacion: '',
       })),
       lectura.totales,
+      { controlarTotal: false },
     )
-    return v.estado === 'OK'
   }, [origen, lectura, renglones])
+  const cuentasOk = !validacionRenglones || validacionRenglones.estado === 'OK'
 
   const conciliacion = useMemo(
     () =>
@@ -151,10 +153,9 @@ function Recepcion({
   )
 
   const total = leerNumero(totalBoleta)
+  // Todos los renglones de la boleta, tengan o no producto asignado (como en La Bodeguita).
   const cuentas = chequearCuentas(
-    conciliacion.filas
-      .filter((f) => f.productoId)
-      .map((f) => ({ cantidad: f.llegoBase, precio: f.precioBase })),
+    renglones.map((r) => ({ cantidad: r.cantidad, precio: r.precioUnit, subtotal: r.subtotal })),
     total !== null && total > 0 ? total : null,
   )
   // Como en La Bodeguita: si falta el total o no cierra, el pedido queda para revisar antes de pagar.
@@ -496,7 +497,9 @@ function Recepcion({
             {origen === 'ia' ? (
               <>
                 <Sparkles size={14} aria-hidden="true" /> Leído con IA ·{' '}
-                {cuentasOk ? 'cuentas verificadas' : 'revisá las cuentas'}
+                {cuentasOk && cuentas.estado === 'ok'
+                  ? 'cuentas verificadas'
+                  : 'revisá las cuentas'}
               </>
             ) : (
               <>
@@ -520,12 +523,14 @@ function Recepcion({
           con este número de {proveedor.nombre} ({hace(duplicado)}). Fijate que no sea el mismo.
         </p>
       )}
-      {lectura && lectura.validacion.observaciones.length > 0 && (
+      {validacionRenglones && validacionRenglones.observaciones.length > 0 && (
         <p className={`aviso ${cuentasOk ? 'aviso--info' : 'aviso--atencion'}`}>
-          {lectura.validacion.observaciones.join(' ')}
+          {validacionRenglones.observaciones.join(' ')}
         </p>
       )}
-      {lectura?.observaciones && <p className="aviso aviso--info">{lectura.observaciones}</p>}
+      {lectura?.observaciones && (
+        <p className="aviso aviso--info">La IA anotó: {lectura.observaciones}</p>
+      )}
 
       <div className="chips" aria-label="Resumen">
         {resumen.correctos > 0 && (

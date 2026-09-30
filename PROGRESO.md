@@ -102,7 +102,9 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Protección de acceso de Netlify sacada (30/9): contestaba 401 al pedir la versión nueva y la app instalada seguía en la etapa 1 sin avisar. La app se protege sola (login, altas cerradas, RLS).
 - [x] La app avisa si no puede bajar la versión nueva (y lo reporta a Sentry), muestra la versión en Ajustes, y explica qué hacer si el link del mail se abre en otro navegador.
 - [x] Total de la boleta, como en La Bodeguita: son dos cosas distintas del precio unitario de cada producto. Se carga a mano o lo completa la IA; se controla contra la suma de renglones (acepta IVA 10,5 % / 21 % o tasas mezcladas, avisa si falta, si no cierra o si un precio parece por caja). Si falta o no cierra, el pedido queda para revisar y el motivo se ve en el pedido y en el panel. Pagos usa ese total.
-- [x] Tests: `npm test` 182, `npm run e2e` 18.
+- [x] Un solo control del total (el de La Bodeguita); el de la IA revisa solo los renglones. La suma usa todos los renglones de la boleta, tengan o no producto asignado. Si la diferencia es chica y no es IVA, lo dice como es.
+- [x] Prueba de la IA de verdad desde la app en local (30/9, Bar Demo): Quilmes 7,1 s y La Esperanza (Factura A, borrosa) 6,0 s, número, total y todos los renglones exactos.
+- [x] Tests: `npm test` 184, `npm run e2e` 18.
 - [ ] Usuarios y locales desde Ajustes, alta de clientes, SMTP (Resend). Plan pendiente de OK.
 
 ## Datos en dev

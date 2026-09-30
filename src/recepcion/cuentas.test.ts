@@ -22,6 +22,15 @@ describe('chequearCuentas (total de la boleta contra los renglones)', () => {
     expect(chequearCuentas([r(10, 1000)], 11050).estado).toBe('ok')
   })
 
+  it('una diferencia chica que no es IVA se dice como es', () => {
+    // Boleta real de Quilmes: renglones $592.458, total $602.561 (+1,7 %).
+    const c = chequearCuentas([r(1, 592457.99)], 602561.19)
+    expect(c.estado).toBe('ok')
+    expect(c.nota).toBe(
+      'La boleta dice $602.561: $10.103 más que los renglones (redondeos o percepciones), las cuentas cierran.',
+    )
+  })
+
   it('tasas mezcladas (entre 10 % y 21,5 %) también cierran', () => {
     expect(chequearCuentas([r(10, 1000)], 11500).estado).toBe('ok')
   })
@@ -37,6 +46,10 @@ describe('chequearCuentas (total de la boleta contra los renglones)', () => {
     expect(c.alertas).toEqual([
       'Las cuentas no cierran: los renglones suman $10.000 y el total dice $15.000.',
     ])
+  })
+
+  it('usa el subtotal del renglón si está (trae los descuentos)', () => {
+    expect(chequearCuentas([{ cantidad: 10, precio: 1000, subtotal: 9000 }], 9000).nota).toBeNull()
   })
 
   it('si faltan precios no acusa de más: cuenta los que no tienen precio', () => {

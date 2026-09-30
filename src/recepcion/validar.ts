@@ -124,7 +124,13 @@ function validarLinea(linea: LineaLeida): LineaValidada {
   return { ...linea, precioUnit, subtotal, confianza, observacion: obs.join(' · '), esPromo: false }
 }
 
-export function validarRemito(lineasLeidas: LineaLeida[], totales: TotalesLeidos): Validacion {
+export function validarRemito(
+  lineasLeidas: LineaLeida[],
+  totales: TotalesLeidos,
+  /** En la pantalla el total lo controla chequearCuentas (cuentas.ts): acá solo los renglones. */
+  opciones: { controlarTotal?: boolean } = {},
+): Validacion {
+  const controlarTotal = opciones.controlarTotal !== false
   const lineas = lineasLeidas.map(validarLinea)
   const observaciones: string[] = []
   const sumaLineas = redondear(lineas.reduce((s, l) => s + (l.subtotal ?? 0), 0))
@@ -155,7 +161,9 @@ export function validarRemito(lineasLeidas: LineaLeida[], totales: TotalesLeidos
   }
 
   // 2) ¿Cierra contra el total?
-  if (total && total > 0) {
+  if (!controlarTotal) {
+    // Lo controla la pantalla con el total de la boleta (que se puede corregir a mano).
+  } else if (total && total > 0) {
     const base = subtotalNeto ?? sumaLineas
     const esperado = base - descuentoGlobal + iva + percepciones
     diferenciaTotal = redondear(total - esperado)

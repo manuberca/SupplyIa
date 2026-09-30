@@ -6,7 +6,12 @@
 
 import { pesos } from '../lib/formato'
 
-export type RenglonConPrecio = { cantidad: number | null; precio: number | null }
+/** Un renglón de la boleta: el subtotal, si está, ya trae los descuentos del renglón. */
+export type RenglonConPrecio = {
+  cantidad: number | null
+  precio: number | null
+  subtotal?: number | null
+}
 
 export type Cuentas = {
   estado: 'ok' | 'revisar'
@@ -24,9 +29,9 @@ const cerca = (a: number, b: number) =>
 
 export function chequearCuentas(renglones: RenglonConPrecio[], total: number | null): Cuentas {
   const llegaron = renglones.filter((r) => (r.cantidad ?? 0) > 0)
-  const conDatos = llegaron.filter((r) => (r.precio ?? 0) > 0)
-  const suma =
-    Math.round(conDatos.reduce((s, r) => s + (r.cantidad ?? 0) * (r.precio ?? 0), 0) * 100) / 100
+  const importe = (r: RenglonConPrecio) => r.subtotal ?? (r.cantidad ?? 0) * (r.precio ?? 0)
+  const conDatos = llegaron.filter((r) => importe(r) > 0)
+  const suma = Math.round(conDatos.reduce((s, r) => s + importe(r), 0) * 100) / 100
   const completo = llegaron.length > 0 && conDatos.length === llegaron.length
   const tot = total ?? 0
   const alertas: string[] = []
@@ -34,9 +39,11 @@ export function chequearCuentas(renglones: RenglonConPrecio[], total: number | n
 
   if (tot <= 0) alertas.push('Falta cargar el total de la boleta.')
   if (tot > 0 && suma > 0) {
-    const coherente =
-      [suma, suma * 1.105, suma * 1.21].some((b) => cerca(b, tot)) ||
+    const igual = cerca(suma, tot)
+    const conIva =
+      [suma * 1.105, suma * 1.21].some((b) => cerca(b, tot)) ||
       (tot >= suma * 1.1 && tot <= suma * 1.215)
+    const coherente = igual || conIva
     if (suma > tot * 1.25) {
       alertas.push(
         `Los renglones suman ${pesos(suma)} pero el total dice ${pesos(tot)}: revisá si algún precio está cargado por caja o pack en vez de por unidad.`,
@@ -45,8 +52,10 @@ export function chequearCuentas(renglones: RenglonConPrecio[], total: number | n
       alertas.push(
         `Las cuentas no cierran: los renglones suman ${pesos(suma)} y el total dice ${pesos(tot)}.`,
       )
-    } else if (coherente && Math.abs(suma - tot) > 1) {
+    } else if (conIva && !igual) {
       nota = `La boleta dice ${pesos(tot)}: la diferencia es el IVA, las cuentas cierran.`
+    } else if (igual && Math.abs(suma - tot) > 1) {
+      nota = `La boleta dice ${pesos(tot)}: ${pesos(Math.abs(tot - suma))} ${tot > suma ? 'más' : 'menos'} que los renglones (redondeos o percepciones), las cuentas cierran.`
     }
   }
 
