@@ -7,7 +7,8 @@ import { archivarProveedor } from '../../catalogo/acciones'
 import type { Catalogo, Proveedor } from '../../catalogo/tipos'
 import { TituloPantalla } from '../../components/TituloPantalla'
 import { textoDias } from '../../lib/dias'
-import { pesos } from '../../lib/formato'
+import { numero, pesos } from '../../lib/formato'
+import { useControl } from '../../control/contexto'
 import { textoUnidades } from '../../lib/presentaciones'
 import { formatearWhatsapp } from '../../lib/whatsapp'
 
@@ -32,6 +33,12 @@ export function FichaProveedor() {
 }
 
 function Ficha({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Proveedor }) {
+  const control = useControl()
+  const m = control.estado === 'listo' ? control.datos.metricas.get(proveedor.id) : undefined
+  const metricas =
+    m && (m.cumplimiento !== null || m.demora !== null)
+      ? `${m.cumplimiento !== null ? `${m.cumplimiento}%` : '—'} · ${m.demora !== null ? `${numero(m.demora, 1)} d` : '—'}`
+      : null
   const [verArchivados, setVerArchivados] = useState(false)
   const productos = catalogo.productos.filter((p) => p.proveedor_id === proveedor.id)
   const activos = productos.filter((p) => p.activo)
@@ -66,7 +73,9 @@ function Ficha({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Proveed
           </div>
           <div>
             <dt>Cumple · demora</dt>
-            <dd className="texto-gris">Sin pedidos todavía</dd>
+            <dd className={metricas ? 'mono' : 'texto-gris'}>
+              {metricas ?? 'Sin pedidos recibidos en 30 días'}
+            </dd>
           </div>
         </dl>
       </section>

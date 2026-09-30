@@ -38,7 +38,18 @@ type Boletas = {
     proveedor: string
     fecha: string
     recibidoEn?: string
-    items?: { productoOriginalBoleta?: string; producto?: string; precioUnit?: number | string }[]
+    id?: string
+    nroBoleta?: string
+    total?: number | string
+    items?: {
+      productoOriginalBoleta?: string
+      producto?: string
+      cantidad?: number | string
+      /** Las boletas más nuevas usan este nombre (y no traen subtotal). */
+      cantidadRecibida?: number | string
+      precioUnit?: number | string
+      subtotal?: number | string
+    }[]
   }[]
 }
 
@@ -69,12 +80,52 @@ function unidadDe(texto: string): { nombre: string; tipo: TipoUnidad } | null {
   return null
 }
 
-/** "9/6/2026, 10:32:26 a. m." o ISO → milisegundos (para quedarse con el precio más nuevo). */
+// La primera boleta de La Bodeguita es de junio de 2026.
+const PRIMERA = new Date(2026, 5, 1).getTime()
+
+/**
+ * La Bodeguita guardó algunas fechas con el día y el mes invertidos (4 de agosto quedó
+ * "2026-04-08"). Si la fecha es imposible (futura o anterior a la primera boleta) y la
+ * inversa es posible, se usa la inversa. Los datos de La Bodeguita no se tocan.
+ */
+function plausible(ms: number): number {
+  const ahora = Date.now()
+  if (ms >= PRIMERA && ms <= ahora) return ms
+  const d = new Date(ms)
+  if (d.getUTCDate() > 12) return ms
+  const invertida = Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCDate() - 1,
+    d.getUTCMonth() + 1,
+    d.getUTCHours(),
+    d.getUTCMinutes(),
+  )
+  return invertida >= PRIMERA && invertida <= ahora ? invertida : ms
+}
+
+/**
+ * "9/6/2026, 10:32:26 a. m." (día/mes/año, como escribe La Bodeguita) o ISO → milisegundos.
+ * OJO: Date.parse con "12/8/2026" lo lee al estilo yanqui (8 de diciembre): solo se usa con ISO.
+ */
 function cuando(b: Boletas['boletas'][number]): number {
-  const iso = Date.parse(b.recibidoEn ?? '')
-  if (!Number.isNaN(iso)) return iso
-  const m = b.fecha.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
-  return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])).getTime() : 0
+  for (const texto of [b.recibidoEn, b.fecha]) {
+    if (!texto) continue
+    if (/^\d{4}-\d{2}-\d{2}T/.test(texto)) return plausible(Date.parse(texto))
+    const m = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{2}))?/)
+    if (m) {
+      let hora = Number(m[4] ?? 12)
+      if (/p\.\s*m\./i.test(texto) && hora < 12) hora += 12
+      if (/a\.\s*m\./i.test(texto) && hora === 12) hora = 0
+      return new Date(
+        Number(m[3]),
+        Number(m[2]) - 1,
+        Number(m[1]),
+        hora,
+        Number(m[5] ?? 0),
+      ).getTime()
+    }
+  }
+  return 0
 }
 
 const { values } = parseArgs({
@@ -84,6 +135,8 @@ const { values } = parseArgs({
     bar: { type: 'string', default: 'Bar Demo' },
     excel: { type: 'string' },
     confirmar: { type: 'boolean', default: false },
+    // Además, las boletas como recepciones pasadas (historial de precios y gasto, para Control).
+    historial: { type: 'boolean', default: false },
   },
 })
 const salir = (m: string): never => {
@@ -298,7 +351,8 @@ if (!values.confirmar) {
 
 // ─── Importar (con la clave de servicio, en el orden de las referencias) ──
 const conOrg = <T extends object>(filas: T[]) => filas.map((f) => ({ ...f, org_id: org!.id }))
-const pasos: [string, () => PromiseLike<{ error: unknown }>][] = [
+const pasos: [string, () => PromiseLike<{ error: unknown }>][] = []
+const todos: [string, () => PromiseLike<{ error: unknown }>][] = [
   ['unidades', () => db.from('unidades').insert(nuevasUnidades)],
   ['proveedores', () => db.from('proveedores').insert(conOrg(r.datos.proveedores))],
   ['productos', () => db.from('productos').insert(conOrg(r.datos.productos))],
@@ -312,9 +366,168 @@ const pasos: [string, () => PromiseLike<{ error: unknown }>][] = [
         .insert(conOrg(r.datos.precios.map((p) => ({ ...p, origen: 'importacion' })))),
   ],
 ]
+// Lo que ya estaba no se vuelve a cargar (correr dos veces no duplica).
+const cantidades: Record<string, number> = {
+  unidades: nuevasUnidades.length,
+  proveedores: r.datos.proveedores.length,
+  productos: r.datos.productos.length,
+  presentaciones: r.datos.presentaciones.length,
+  equivalencias: r.datos.equivalencias.length,
+  precios: r.datos.precios.length,
+}
+pasos.push(...todos.filter(([nombre]) => (cantidades[nombre] ?? 0) > 0))
 for (const [nombre, paso] of pasos) {
   const { error } = await paso()
   if (error) salir(`Falló al importar ${nombre}: ${JSON.stringify(error)}`)
   console.log(`✓ ${nombre}`)
 }
 console.log(`\nListo: catálogo de La Bodeguita cargado en ${org!.nombre} (dev).`)
+
+// ─── Historial: las boletas como recepciones pasadas ──────────────────────
+if (values.historial) {
+  const { createHash } = await import('node:crypto')
+  // Ids fijos a partir de la boleta: correr dos veces no duplica nada.
+  const uuid = (semilla: string) => {
+    const h = createHash('sha1').update(`labode:${semilla}`).digest('hex')
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`
+  }
+  const [{ data: admin }, { data: local }, { data: provs }, { data: prods }] = await Promise.all([
+    db
+      .from('miembros')
+      .select('user_id')
+      .eq('org_id', org!.id)
+      .eq('rol', 'admin')
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from('locales')
+      .select('id')
+      .eq('org_id', org!.id)
+      .eq('activo', true)
+      .order('nombre')
+      .limit(1)
+      .maybeSingle(),
+    db.from('proveedores').select('id, nombre').eq('org_id', org!.id).eq('activo', true),
+    db
+      .from('productos')
+      .select('id, nombre, proveedor_id')
+      .eq('org_id', org!.id)
+      .eq('activo', true),
+  ])
+  if (!admin || !local)
+    salir(`${org!.nombre} necesita un admin y un local para cargar el historial.`)
+  const proveedorId = new Map(provs!.map((p) => [normalizar(p.nombre), p.id]))
+  const productoId = new Map(prods!.map((p) => [`${p.proveedor_id}|${normalizar(p.nombre)}`, p.id]))
+  const n = (v: unknown) => (typeof v === 'number' ? v : Number(v))
+
+  const recepciones: Database['public']['Tables']['recepciones']['Insert'][] = []
+  const items: Database['public']['Tables']['recepcion_items']['Insert'][] = []
+  const preciosHist: Database['public']['Tables']['precios']['Insert'][] = []
+  for (const [i, b] of boletas.entries()) {
+    const prov = proveedorId.get(normalizar(b.proveedor))
+    const fecha = cuando(b)
+    if (!prov || !fecha) continue
+    const id = uuid(b.id ?? `${b.proveedor}-${i}`)
+    const recibido = new Date(fecha).toISOString()
+    const renglones = (b.items ?? []).flatMap((it, j) => {
+      const prod = it.producto ? productoId.get(`${prov}|${normalizar(it.producto)}`) : undefined
+      const cantidad = n(it.cantidad ?? it.cantidadRecibida)
+      const precio = n(it.precioUnit)
+      if (!prod || !(cantidad > 0)) return []
+      return [
+        {
+          j,
+          prod,
+          cantidad,
+          precio: precio > 0 ? precio : null,
+          subtotal:
+            n(it.subtotal) > 0
+              ? n(it.subtotal)
+              : precio > 0
+                ? Math.round(cantidad * precio * 100) / 100
+                : null,
+          texto: it.productoOriginalBoleta ?? '',
+        },
+      ]
+    })
+    if (renglones.length === 0) continue
+    recepciones.push({
+      id,
+      org_id: org!.id,
+      local_id: local!.id,
+      proveedor_id: prov,
+      recibido_at: recibido,
+      recibido_por: admin!.user_id,
+      origen: 'manual',
+      nro_remito: b.nroBoleta || null,
+      total_remito: n(b.total) > 0 ? n(b.total) : null,
+      observaciones: 'Importado del historial de La Bodeguita',
+    })
+    for (const x of renglones) {
+      items.push({
+        id: uuid(`${id}:${x.j}`),
+        org_id: org!.id,
+        recepcion_id: id,
+        producto_id: x.prod,
+        texto_remito: x.texto.slice(0, 200),
+        cantidad_base: x.cantidad,
+        precio_unit_base: x.precio,
+        subtotal: x.subtotal,
+        resultado: 'ok',
+      })
+      if (x.precio) {
+        preciosHist.push({
+          id: uuid(`${id}:${x.j}:precio`),
+          org_id: org!.id,
+          proveedor_id: prov,
+          producto_id: x.prod,
+          precio_base: x.precio,
+          fecha: recibido,
+          origen: 'recepcion',
+          recepcion_id: id,
+        })
+      }
+    }
+  }
+  console.log(
+    `\nHistorial: ${recepciones.length} recepciones, ${items.length} renglones, ${preciosHist.length} precios.`,
+  )
+  // De a 500 filas. Si ya estaba (mismo id), se actualiza: un arreglo del script corrige lo cargado sin borrar nada.
+  const cargar = async (
+    tabla: 'recepciones' | 'recepcion_items' | 'precios',
+    filas: { id?: string }[],
+  ) => {
+    for (let k = 0; k < filas.length; k += 500) {
+      const { error } = await db
+        .from(tabla)
+        .upsert(filas.slice(k, k + 500) as never, { onConflict: 'id' })
+      if (error) salir(`Falló al cargar ${tabla}: ${JSON.stringify(error)}`)
+    }
+    console.log(`✓ ${tabla}`)
+  }
+  await cargar('recepciones', recepciones)
+  await cargar('recepcion_items', items)
+  await cargar('precios', preciosHist)
+  // El "último precio" que trajo el catálogo quedó con la fecha de la importación: pasa a
+  // tener la de la última compra real (si no, parece que se compró hoy).
+  const ultimaCompra = new Map<string, string>()
+  for (const p of preciosHist) {
+    if (!ultimaCompra.has(p.producto_id) || p.fecha! > ultimaCompra.get(p.producto_id)!)
+      ultimaCompra.set(p.producto_id, p.fecha!)
+  }
+  const { data: importados } = await db
+    .from('precios')
+    .select('id, producto_id, fecha')
+    .eq('org_id', org!.id)
+    .eq('origen', 'importacion')
+  let corregidos = 0
+  for (const p of importados ?? []) {
+    const fecha = ultimaCompra.get(p.producto_id)
+    if (!fecha || fecha === p.fecha) continue
+    const { error } = await db.from('precios').update({ fecha }).eq('id', p.id)
+    if (error) salir(`Falló al corregir fechas: ${JSON.stringify(error)}`)
+    corregidos++
+  }
+  if (corregidos) console.log(`✓ fecha del último precio corregida en ${corregidos} productos`)
+  console.log(`Listo: historial de La Bodeguita en ${org!.nombre} (dev).`)
+}

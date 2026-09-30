@@ -1,6 +1,9 @@
 import { Link } from 'react-router'
-import { ClipboardList, ScanLine } from 'lucide-react'
+import { ClipboardList, ScanLine, TrendingUp } from 'lucide-react'
 import { EsperarCatalogo } from '../catalogo/EsperarCatalogo'
+import { useCatalogo } from '../catalogo/contexto'
+import { useControl } from '../control/contexto'
+import { porcentaje } from '../lib/formato'
 import { puede } from '../lib/permisos'
 import { usePedidos } from '../pedidos/contexto'
 import { FilasPedidos } from '../pedidos/FilasPedidos'
@@ -58,6 +61,8 @@ export function Inicio() {
         </Link>
       </div>
 
+      <AlertaAumentos />
+
       <PedidosEnCurso />
     </>
   )
@@ -86,5 +91,49 @@ function PedidosEnCurso() {
         )}
       </EsperarCatalogo>
     </>
+  )
+}
+
+/** "Subieron 3 insumos esta semana" (solo para quien ve Precios). */
+function AlertaAumentos() {
+  const { miembro } = useSesionLista()
+  const control = useControl()
+  const { catalogo } = useCatalogo()
+  if (!puede(miembro.rol, 'precios') || control.estado !== 'listo' || catalogo.estado !== 'listo')
+    return null
+  const { alertas } = control.datos
+  if (alertas.length === 0) return null
+  const cat = catalogo.catalogo
+  const n = alertas.length
+
+  return (
+    <section className="card alerta-aumentos" aria-labelledby="titulo-aumentos">
+      <div className="seccion-encabezado">
+        <h2 id="titulo-aumentos" className="alerta-aumentos__titulo">
+          <span className="alerta-aumentos__icono" aria-hidden="true">
+            <TrendingUp size={18} />
+          </span>
+          {n === 1 ? 'Subió 1 insumo esta semana' : `Subieron ${n} insumos esta semana`}
+        </h2>
+        <Link to="/precios" className="enlace-accion">
+          Ver
+        </Link>
+      </div>
+      <div className="lista lista--sin-borde">
+        {alertas.slice(0, 3).map((a) => (
+          <div key={a.producto_id} className="lista__fila">
+            <span className="lista__texto">
+              <span className="lista__titulo">
+                {cat.productos.find((p) => p.id === a.producto_id)?.nombre}
+              </span>
+              <span className="lista__detalle">
+                {cat.proveedores.find((p) => p.id === a.proveedor_id)?.nombre}
+              </span>
+            </span>
+            <span className="lista__dato mono texto-error">{porcentaje(a.variacionPct)}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }

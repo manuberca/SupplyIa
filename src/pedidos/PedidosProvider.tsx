@@ -15,7 +15,7 @@ async function cargar(localId: string): Promise<Guardado[] | { error: string }> 
   const { data, error } = await supabase
     .from('pedidos')
     .select(
-      'id, numero, estado, local_id, proveedor_id, observaciones, creado_at, pedido_items ( id, producto_id, presentacion_id, cantidad, precio_estimado_base )',
+      'id, numero, estado, local_id, proveedor_id, observaciones, creado_at, pedido_items ( id, producto_id, presentacion_id, cantidad, precio_estimado_base ), recepciones ( recibido_at, total_remito, recepcion_items ( producto_id, resultado ) )',
     )
     .eq('local_id', localId)
     .order('creado_at', { ascending: false })
@@ -25,11 +25,23 @@ async function cargar(localId: string): Promise<Guardado[] | { error: string }> 
     if (!sinRed) reportar(error, 'No se pudieron cargar los pedidos')
     return { error: sinRed ? SIN_CONEXION : 'No pudimos cargar los pedidos. Probá de nuevo.' }
   }
-  return data.map(({ pedido_items, ...p }) => ({
-    ...p,
-    estado: p.estado as EstadoPedido,
-    items: pedido_items,
-  }))
+  return data.map(({ pedido_items, recepciones, ...p }) => {
+    const ultima = [...recepciones].sort((a, b) => b.recibido_at.localeCompare(a.recibido_at))[0]
+    return {
+      ...p,
+      estado: p.estado as EstadoPedido,
+      items: pedido_items,
+      recepcion: ultima
+        ? {
+            recibidoAt: ultima.recibido_at,
+            total: ultima.total_remito,
+            faltantes: ultima.recepcion_items.flatMap((i) =>
+              i.resultado === 'faltante' && i.producto_id ? [i.producto_id] : [],
+            ),
+          }
+        : null,
+    }
+  })
 }
 
 const cargarSeguro = (localId: string) =>

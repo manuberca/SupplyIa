@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
+import { todasLasFilas } from '../lib/paginar'
 import { reportar } from '../lib/errores'
 import { SIN_CONEXION } from '../lib/errores-auth'
 import { guardar, leer } from '../offline/almacen'
@@ -26,21 +27,46 @@ async function cargar(): Promise<EstadoCatalogo> {
       .from('ajustes')
       .select('umbral_alerta_pct, tolerancia_peso_pct, tolerancia_unidad_pct')
       .maybeSingle(),
-    supabase.from('unidades').select('id, nombre, tipo, archivada').order('nombre'),
-    supabase
-      .from('proveedores')
-      .select('id, nombre, whatsapp, dias_entrega, hora_limite, umbral_alerta_pct, activo')
-      .order('nombre'),
-    supabase
-      .from('productos')
-      .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo')
-      .order('nombre'),
-    supabase
-      .from('presentaciones')
-      .select('id, producto_id, nombre, factor_a_base, aproximada')
-      .eq('activa', true)
-      .order('factor_a_base'),
-    supabase.from('ultimos_precios').select('producto_id, precio_base, fecha'),
+    todasLasFilas((a, b) =>
+      supabase
+        .from('unidades')
+        .select('id, nombre, tipo, archivada')
+        .order('nombre')
+        .order('id')
+        .range(a, b),
+    ),
+    todasLasFilas((a, b) =>
+      supabase
+        .from('proveedores')
+        .select('id, nombre, whatsapp, dias_entrega, hora_limite, umbral_alerta_pct, activo')
+        .order('nombre')
+        .order('id')
+        .range(a, b),
+    ),
+    todasLasFilas((a, b) =>
+      supabase
+        .from('productos')
+        .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo')
+        .order('nombre')
+        .order('id')
+        .range(a, b),
+    ),
+    todasLasFilas((a, b) =>
+      supabase
+        .from('presentaciones')
+        .select('id, producto_id, nombre, factor_a_base, aproximada')
+        .eq('activa', true)
+        .order('factor_a_base')
+        .order('id')
+        .range(a, b),
+    ),
+    todasLasFilas((a, b) =>
+      supabase
+        .from('ultimos_precios')
+        .select('producto_id, precio_base, fecha')
+        .order('producto_id')
+        .range(a, b),
+    ),
   ])
 
   const error =

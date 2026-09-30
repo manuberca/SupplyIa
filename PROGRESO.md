@@ -69,6 +69,19 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 **Listo cuando** (ajustado): los remitos de prueba armados con boletas reales se leen bien (número, total y renglones) y la carga manual funciona si la IA falla (esto último ✅). Cuando haya fotos reales, se prueban con el mismo script.
 
+## Etapa 5 — Control (en prueba)
+
+- [x] Plan aprobado (30/9). La prueba de la IA de la etapa 4 queda para cuando Manu tenga la clave personal.
+- [x] Métricas con tests (`src/control/metricas.ts`, SPEC §6): variación de cada producto en 30 días, aumento del proveedor ponderado por lo gastado, cumplimiento (renglones pedidos completos), demora (enviado → recibido), alertas de la semana con umbral producto → proveedor → general. Los saltos de más de ×4 o menos de ÷4 se marcan "Revisá la unidad" (casi seguro otra unidad) y no cuentan.
+- [x] Pantallas: Precios (chips por proveedor, "subió X% en 30 días", gráfico SVG propio, lista), ranking en Proveedores (cumplimiento / demora / aumentos) y métricas en la ficha, Inicio con "Subieron N insumos esta semana" y pedidos en curso con el detalle de la recepción, Ajustes (umbral, excepciones por proveedor o producto, tolerancias).
+- [x] Arreglo importante: Supabase devuelve como máximo 1.000 filas por consulta; catálogo y control ahora piden de a páginas (`src/lib/paginar.ts`). Sin esto, Control calculaba con datos viejos e incompletos.
+- [x] Historial de La Bodeguita en Bar Demo (dev): `npm run labode:importar -- … --confirmar --historial` (382 recepciones, 1.855 renglones, 953 precios, jun–sep). El script corrige solo de su lado: fechas con día y mes invertidos en La Bodeguita (41 boletas), el formato nuevo de boletas (`cantidadRecibida`) y la fecha del "último precio".
+- [x] Usuario de prueba `encargado-demo@supplyia.test` (Bar Demo, dev, misma contraseña que los de prueba) para ver pantallas con datos reales.
+- [x] Tests: `npm test` 164, `npm run test:db` 52, `npm run e2e` 16.
+- [ ] Deploy (sin migraciones nuevas) y prueba en el celular.
+
+**Listo cuando:** los aumentos, el ranking y las alertas coinciden con una cuenta a mano. ✅ Cuenta independiente en Python sobre Bar Demo: Vinesco −1,7 %, Papelera +0,1 %, Quilmes +37,2 %, La Esperanza +3,4 %, idénticos a la app.
+
 ## Datos en dev
 
 - Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano.

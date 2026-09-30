@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LogOut } from 'lucide-react'
 import { NOMBRE_ROL, puede } from '../lib/permisos'
 import { useSesion, useSesionLista } from '../sesion/contexto'
+import { ControlAjustes } from './ajustes/ControlAjustes'
 import { UnidadesAjustes } from './ajustes/UnidadesAjustes'
 
 export function Ajustes() {
@@ -37,13 +38,9 @@ export function Ajustes() {
         </section>
       )}
 
-      {esAdmin && <UnidadesAjustes />}
+      {esAdmin && <ControlAjustes />}
 
-      {esAdmin && (
-        <section className="card pendiente">
-          <p>Umbral de alerta, tolerancias y equipo se configuran acá más adelante.</p>
-        </section>
-      )}
+      {esAdmin && <UnidadesAjustes />}
 
       <section className="card formulario">
         <dl className="datos">

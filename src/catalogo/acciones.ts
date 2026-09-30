@@ -171,3 +171,26 @@ export function archivarUnidad(id: string, archivar: boolean) {
 export function importarCatalogo(datos: DatosImportacion) {
   return ejecutar('Importar catálogo', [() => supabase.rpc('importar_catalogo', { datos })])
 }
+
+// ─── Ajustes de control (solo administración) ────────────────────────────
+
+export function guardarAjustes(
+  orgId: string,
+  cambios: Partial<{
+    umbral_alerta_pct: number
+    tolerancia_peso_pct: number
+    tolerancia_unidad_pct: number
+  }>,
+) {
+  return ejecutar('Guardar ajustes', [
+    () => supabase.from('ajustes').update(cambios).eq('org_id', orgId),
+  ])
+}
+
+/** Excepción de umbral para un proveedor o un producto (null la saca). */
+export function cambiarUmbral(tipo: 'proveedor' | 'producto', id: string, umbral: number | null) {
+  const tabla = tipo === 'proveedor' ? 'proveedores' : 'productos'
+  return ejecutar('Cambiar umbral', [
+    () => supabase.from(tabla).update({ umbral_alerta_pct: umbral }).eq('id', id),
+  ])
+}

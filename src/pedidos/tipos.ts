@@ -28,6 +28,8 @@ export type Pedido = {
   items: ItemPedido[]
   /** null si ya está en la base. */
   subida: null | { error: string | null }
+  /** La última recepción del pedido, si llegó. */
+  recepcion?: { recibidoAt: string; total: number | null; faltantes: string[] } | null
 }
 
 export const ESTADOS: Record<EstadoPedido, { texto: string; clase: string }> = {

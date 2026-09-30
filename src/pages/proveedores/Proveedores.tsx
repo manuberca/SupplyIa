@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { FileSpreadsheet, Plus, Search } from 'lucide-react'
 import { EsperarCatalogo } from '../../catalogo/EsperarCatalogo'
+import { useControl } from '../../control/contexto'
 import { textoDias } from '../../lib/dias'
+import { numero, porcentaje } from '../../lib/formato'
 import { normalizar } from '../../lib/normalizar'
 import type { Catalogo } from '../../catalogo/tipos'
 
@@ -21,9 +23,57 @@ export function Proveedores() {
   )
 }
 
+type Orden = 'cumplimiento' | 'demora' | 'aumentos' | 'nombre'
+type Indicadores = {
+  pedidos: number
+  cumplimiento: number | null
+  demora: number | null
+  aumento: number | null
+}
+
+const ORDENES: { valor: Orden; texto: string }[] = [
+  { valor: 'cumplimiento', texto: 'Cumplimiento' },
+  { valor: 'demora', texto: 'Demora' },
+  { valor: 'aumentos', texto: 'Aumentos' },
+  { valor: 'nombre', texto: 'A–Z' },
+]
+
 function Lista({ catalogo }: { catalogo: Catalogo }) {
   const [busqueda, setBusqueda] = useState('')
   const [verArchivados, setVerArchivados] = useState(false)
+  const [orden, setOrden] = useState<Orden>('cumplimiento')
+  const control = useControl()
+
+  // Ranking de los últimos 30 días (SPEC §6).
+  const indicadores = new Map<string, Indicadores>()
+  if (control.estado === 'listo') {
+    for (const p of catalogo.proveedores) {
+      const m = control.datos.metricas.get(p.id)
+      indicadores.set(p.id, {
+        pedidos: m?.pedidos ?? 0,
+        cumplimiento: m?.cumplimiento ?? null,
+        demora: m?.demora ?? null,
+        aumento: control.datos.aumentoDe(p.id),
+      })
+    }
+  }
+  const totalPedidos = [...indicadores.values()].reduce((s, x) => s + x.pedidos, 0)
+  // Sin dato, al final; si no, el mejor primero.
+  const clave = (id: string): number | null => {
+    const x = indicadores.get(id)
+    if (orden === 'cumplimiento') return x?.cumplimiento != null ? -x.cumplimiento : null
+    if (orden === 'demora') return x?.demora ?? null
+    if (orden === 'aumentos') return x?.aumento ?? null
+    return null
+  }
+  const ordenar = (lista: Catalogo['proveedores']) =>
+    [...lista].sort((a, b) => {
+      const ka = clave(a.id)
+      const kb = clave(b.id)
+      if (ka === null && kb !== null) return 1
+      if (kb === null && ka !== null) return -1
+      return (ka ?? 0) - (kb ?? 0) || a.nombre.localeCompare(b.nombre)
+    })
 
   const productosPor = new Map<string, number>()
   for (const p of catalogo.productos) {
@@ -72,13 +122,28 @@ function Lista({ catalogo }: { catalogo: Catalogo }) {
         </label>
       )}
 
-      <p className="formulario__ayuda">
-        Cuando haya pedidos, acá vas a ver cumplimiento, demora y aumentos de cada uno.
+      <p className="subtitulo">
+        Últimos 30 días · {totalPedidos}{' '}
+        {totalPedidos === 1 ? 'pedido recibido' : 'pedidos recibidos'}
       </p>
+      <div className="chips chips--chicos" role="group" aria-label="Ordenar por">
+        {ORDENES.map((o) => (
+          <button
+            key={o.valor}
+            className="chip"
+            aria-pressed={orden === o.valor}
+            onClick={() => setOrden(o.valor)}
+          >
+            {o.texto}
+          </button>
+        ))}
+      </div>
 
       <FilasProveedores
-        lista={filtrar(activos)}
+        lista={ordenar(filtrar(activos))}
         productosPor={productosPor}
+        indicadores={indicadores}
+        umbral={catalogo.ajustes.umbral_alerta_pct}
         vacia="Ningún proveedor coincide con la búsqueda."
       />
 
@@ -98,6 +163,8 @@ function Lista({ catalogo }: { catalogo: Catalogo }) {
         <FilasProveedores
           lista={filtrar(archivados)}
           productosPor={productosPor}
+          indicadores={indicadores}
+          umbral={catalogo.ajustes.umbral_alerta_pct}
           vacia="Ningún archivado coincide."
         />
       )}
@@ -108,10 +175,14 @@ function Lista({ catalogo }: { catalogo: Catalogo }) {
 function FilasProveedores({
   lista,
   productosPor,
+  indicadores,
+  umbral,
   vacia,
 }: {
   lista: Catalogo['proveedores']
   productosPor: Map<string, number>
+  indicadores: Map<string, Indicadores>
+  umbral: number
   vacia: string
 }) {
   return (
@@ -119,24 +190,48 @@ function FilasProveedores({
       {lista.length === 0 && <p className="lista__vacia">{vacia}</p>}
       {lista.map((p) => {
         const cantidad = productosPor.get(p.id) ?? 0
+        const x = indicadores.get(p.id)
+        const conDatos = x && (x.cumplimiento !== null || x.demora !== null || x.aumento !== null)
         return (
-          <Link key={p.id} to={`/proveedores/${p.id}`} className="lista__fila">
+          <Link key={p.id} to={`/proveedores/${p.id}`} className="lista__fila fila-proveedor">
             <span className="lista__texto">
               <span className="lista__titulo">{p.nombre}</span>
               <span className="lista__detalle">
-                {textoDias(p.dias_entrega)}
-                {p.hora_limite ? ` · antes de ${p.hora_limite}` : ''}
+                {!p.activo ? (
+                  <span className="pastilla pastilla--gris">Archivado</span>
+                ) : x?.pedidos ? (
+                  `${x.pedidos} ${x.pedidos === 1 ? 'pedido' : 'pedidos'} · ${cantidad} ${cantidad === 1 ? 'producto' : 'productos'}`
+                ) : (
+                  `${textoDias(p.dias_entrega)} · ${cantidad} ${cantidad === 1 ? 'producto' : 'productos'}`
+                )}
               </span>
             </span>
-            <span className="lista__dato">
-              {p.activo ? (
-                <span className="texto-gris">
-                  {cantidad} {cantidad === 1 ? 'producto' : 'productos'}
+            {conDatos && (
+              <span className="metricas" aria-label="Últimos 30 días">
+                <span>
+                  <span className="metricas__nombre">Cumple</span>
+                  <span
+                    className={`metricas__valor${x.cumplimiento !== null && x.cumplimiento < 85 ? ' metricas__valor--aviso' : ''}`}
+                  >
+                    {x.cumplimiento !== null ? `${x.cumplimiento}%` : '—'}
+                  </span>
                 </span>
-              ) : (
-                <span className="pastilla pastilla--gris">Archivado</span>
-              )}
-            </span>
+                <span>
+                  <span className="metricas__nombre">Demora</span>
+                  <span className="metricas__valor">
+                    {x.demora !== null ? `${numero(x.demora, 1)} d` : '—'}
+                  </span>
+                </span>
+                <span>
+                  <span className="metricas__nombre">Precios</span>
+                  <span
+                    className={`metricas__valor${x.aumento !== null && x.aumento > umbral ? ' metricas__valor--error' : ''}`}
+                  >
+                    {x.aumento !== null ? porcentaje(x.aumento) : '—'}
+                  </span>
+                </span>
+              </span>
+            )}
           </Link>
         )
       })}
