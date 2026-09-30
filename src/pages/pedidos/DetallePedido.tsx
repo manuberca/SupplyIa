@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { Copy, RotateCcw, Send, TriangleAlert, X } from 'lucide-react'
+import { Copy, RotateCcw, ScanLine, Send, TriangleAlert, X } from 'lucide-react'
 import { EsperarCatalogo } from '../../catalogo/EsperarCatalogo'
 import type { Catalogo } from '../../catalogo/tipos'
 import { TituloPantalla } from '../../components/TituloPantalla'
@@ -13,6 +13,7 @@ import { usePedidos } from '../../pedidos/contexto'
 import { enlaceWhatsapp, estimado } from '../../pedidos/logica'
 import { ESTADOS, numeroPedido, type EstadoPedido, type Pedido } from '../../pedidos/tipos'
 import { useSesionLista } from '../../sesion/contexto'
+import { RecepcionDelPedido } from './RecepcionDelPedido'
 
 export function DetallePedido() {
   const { id } = useParams()
@@ -40,6 +41,7 @@ export function DetallePedido() {
 function Detalle({ pedido, catalogo }: { pedido: Pedido; catalogo: Catalogo }) {
   const [params] = useSearchParams()
   const { org, local, miembro } = useSesionLista()
+  const { version } = useCola()
   const [copiado, setCopiado] = useState(false)
   const proveedor = catalogo.proveedores.find((p) => p.id === pedido.proveedor_id)
   const lista = renglones(pedido.items, catalogo)
@@ -112,25 +114,37 @@ function Detalle({ pedido, catalogo }: { pedido: Pedido; catalogo: Catalogo }) {
         </p>
       )}
 
-      <section className="card formulario" aria-label="Mensaje de WhatsApp">
-        <div className="campo__etiqueta">Mensaje para {proveedor?.nombre ?? 'el proveedor'}</div>
-        <p className="mensaje-whatsapp">{mensaje}</p>
-        {proveedor && (
-          <a
-            className="boton boton--enviar"
-            href={enlaceWhatsapp(proveedor.whatsapp, mensaje)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Send size={18} aria-hidden="true" />
-            {recienEnviado ? 'Abrir WhatsApp' : 'Mandar de nuevo por WhatsApp'}
-          </a>
-        )}
-        <button className="boton boton--secundario" onClick={copiar}>
-          <Copy size={18} aria-hidden="true" />
-          {copiado ? '¡Copiado!' : 'Copiar mensaje'}
-        </button>
-      </section>
+      {/* El mensaje sirve mientras el pedido no llegó; después, lo que importa es la recepción. */}
+      {(pedido.subida || ['borrador', 'enviado', 'no_llego'].includes(pedido.estado)) && (
+        <section className="card formulario" aria-label="Mensaje de WhatsApp">
+          <div className="campo__etiqueta">Mensaje para {proveedor?.nombre ?? 'el proveedor'}</div>
+          <p className="mensaje-whatsapp">{mensaje}</p>
+          {proveedor && (
+            <a
+              className="boton boton--enviar"
+              href={enlaceWhatsapp(proveedor.whatsapp, mensaje)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Send size={18} aria-hidden="true" />
+              {recienEnviado ? 'Abrir WhatsApp' : 'Mandar de nuevo por WhatsApp'}
+            </a>
+          )}
+          <button className="boton boton--secundario" onClick={copiar}>
+            <Copy size={18} aria-hidden="true" />
+            {copiado ? '¡Copiado!' : 'Copiar mensaje'}
+          </button>
+        </section>
+      )}
+
+      {!pedido.subida && ['enviado', 'no_llego', 'recibido_parcial'].includes(pedido.estado) && (
+        <Link to={`/recibir/pedido/${pedido.id}`} className="boton boton--primario">
+          <ScanLine size={18} aria-hidden="true" />
+          Recibir mercadería
+        </Link>
+      )}
+
+      {!pedido.subida && <RecepcionDelPedido pedidoId={pedido.id} version={version} />}
 
       {!pedido.subida && puede(miembro.rol, 'pedir') && <CambiarEstado pedido={pedido} />}
     </>
@@ -202,6 +216,20 @@ function CambiarEstado({ pedido }: { pedido: Pedido }) {
         pregunta: '¿Cancelar el pedido? Avisale también al proveedor.',
       },
     )
+  }
+  if (pedido.estado === 'revisar') {
+    opciones.push({
+      estado: 'a_pagar',
+      texto: 'Está resuelto: a pagar',
+      pregunta: '¿Ya se resolvieron las diferencias? El pedido queda a pagar.',
+    })
+  }
+  if (pedido.estado === 'a_pagar') {
+    opciones.push({
+      estado: 'pagado',
+      texto: 'Marcar pagado',
+      pregunta: '¿Ya se le pagó al proveedor?',
+    })
   }
   if (pedido.estado === 'no_llego') {
     opciones.push({

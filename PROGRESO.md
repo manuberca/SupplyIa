@@ -39,7 +39,7 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 **Listo cuando:** se carga un proveedor con productos en caja y en kg, y no se puede duplicar ni borrar nada en uso. ✅ (dev y prod)
 
-## Etapa 3 — Pedidos (en curso)
+## Etapa 3 — Pedidos (en prueba en el celular)
 
 - [x] Plan aprobado (30/9). Decisión: sin señal el pedido no tiene número; el mensaje de WhatsApp va sin número y el número aparece al subir.
 - [x] Migración `pedidos` en **dev**: `pedidos` y `pedido_items` con RLS por local (recepción ve los de su local, no pide), numeración por organización (`privado.contadores`), la base calcula la cantidad base, estados manuales enviado ↔ no llegó → cancelado, nada se borra. `guardar_pedido(jsonb)`: todo o nada e idempotente (reintentar con el mismo id no duplica).
@@ -50,6 +50,21 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [ ] Deploy y prueba en el celular en modo avión.
 
 **Listo cuando:** un pedido hecho en modo avión se sube solo al volver la señal. ✅ en dev.
+
+## Etapa 4 — Recepción con IA (en curso)
+
+- [x] Plan aprobado (30/9). Modelo `claude-opus-5-5` con esfuerzo `low`, salida estructurada y `fallbacks: "default"` (cambiable con `OCR_MODEL` / `OCR_EFFORT` sin redeployar).
+- [x] Migraciones en **dev**: `recepciones`, `recepcion_items`, `diferencias`, `correcciones_ocr`, `uso_lecturas`, bucket privado `remitos` (carpeta por organización). `confirmar_recepcion(jsonb)`: idempotente, guarda precios, diferencias, equivalencias y correcciones, y pasa el pedido a `a_pagar` / `revisar`. Estados manuales nuevos: revisar → a pagar → pagado. `reservar_lectura` / `devolver_lectura`: tope mensual, solo desde el servidor.
+- [x] Lógica con tests: control de cuentas (`validarBoleta` de La Bodeguita portado, sin las reglas propias de Papelera), conciliación (tolerancias, umbral producto → proveedor → general, faltantes, excesos, no pedidos, sin asignar), conversión de unidades (caja → kg, g → kg).
+- [x] Función `netlify/functions/ocr` (`/api/ocr`): exige sesión, tope del mes, catálogo del bar con códigos P1…, equivalencias y correcciones como contexto, prompt de La Bodeguita, zod, aviso de remito duplicado, Sentry. En local corre dentro de Vite (`funciones-locales.ts`).
+- [x] Pantallas: Recibir (pedidos por llegar o sin pedido), foto (se comprime a 1600 px), leyendo, revisión como `Recepcion.dc.html` (todo editable, asignar renglones, quitar, agregar), reclamo por WhatsApp, cargar a mano (siempre visible; sin señal pasa por la cola), detalle del pedido con la recepción y las diferencias (reclamado / nota de crédito / resuelto).
+- [x] Tests: `npm test` 151, `npm run test:db` 52 (10 de recepciones), `npm run e2e` 15 (IA simulada: lectura, falla de la IA, carga a mano sin señal).
+- [x] Script `npm run remitos:probar -- <carpeta>`: lee fotos reales con la IA de verdad y arma un informe para comparar contra el papel.
+- [ ] Clave de Anthropic en `.env.local` (Manu) y medir tiempos reales.
+- [ ] 10 remitos reales de La Bodeguita + catálogo de sus proveedores en Bar Demo (dev) → informe → ajustes.
+- [ ] Migraciones en prod (confirmar antes), variables en Netlify (`ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` de prod) y deploy.
+
+**Listo cuando:** 10 remitos reales de La Bodeguita se leen y concilian bien, y la carga manual funciona si la IA falla (esto último ✅ en dev).
 
 ## Datos en dev
 

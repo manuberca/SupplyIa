@@ -9,6 +9,8 @@ import { DetallePedido } from './pages/pedidos/DetallePedido'
 import { ElegirProveedor } from './pages/pedidos/ElegirProveedor'
 import { NuevoPedido } from './pages/pedidos/NuevoPedido'
 import { Pedidos } from './pages/pedidos/Pedidos'
+import { NuevaRecepcion } from './pages/recepcion/NuevaRecepcion'
+import { Recibir } from './pages/recepcion/Recibir'
 import { Ajustes } from './pages/Ajustes'
 import { Inicio } from './pages/Inicio'
 import { Login } from './pages/Login'
@@ -75,10 +77,9 @@ export function App() {
                   </Route>
                   <Route path="pedidos" element={<Pedidos />} />
                   <Route path="pedidos/:id" element={<DetallePedido />} />
-                  <Route
-                    path="recibir"
-                    element={<Pendiente titulo="Recibir mercadería" etapa={4} />}
-                  />
+                  <Route path="recibir" element={<Recibir />} />
+                  <Route path="recibir/pedido/:pedidoId" element={<NuevaRecepcion />} />
+                  <Route path="recibir/proveedor/:proveedorId" element={<NuevaRecepcion />} />
                   <Route
                     path="proveedores"
                     element={

@@ -5,7 +5,14 @@ import { ERROR_DB_DESCONOCIDO, mensajeErrorDb } from '../lib/errores-db'
 import { SIN_CONEXION } from '../lib/errores-auth'
 import { useSesionLista } from '../sesion/contexto'
 import { guardar, leer } from './almacen'
-import { procesarCola, type Operacion, type PedidoParaGuardar, type ResultadoEnvio } from './cola'
+import type { Json } from '../lib/database.types'
+import {
+  procesarCola,
+  type Operacion,
+  type PedidoParaGuardar,
+  type RecepcionParaGuardar,
+  type ResultadoEnvio,
+} from './cola'
 import { ContextoCola, type ValorCola } from './contexto'
 
 const CADA = 20_000 // mientras haya pendientes, reintenta cada 20 segundos
@@ -13,14 +20,17 @@ const CADA = 20_000 // mientras haya pendientes, reintenta cada 20 segundos
 async function enviar(op: Operacion): Promise<ResultadoEnvio> {
   if (!navigator.onLine) return { ok: false, reintentar: true }
   try {
-    const { error } = await supabase.rpc('guardar_pedido', { pedido: op.datos })
+    const { error } =
+      op.tipo === 'crear_pedido'
+        ? await supabase.rpc('guardar_pedido', { pedido: op.datos })
+        : await supabase.rpc('confirmar_recepcion', { recepcion: op.datos as unknown as Json })
     if (!error) return { ok: true }
     // Sin señal o sesión vencida (se renueva sola): se reintenta más tarde.
     if (!error.code || error.code.startsWith('PGRST3') || mensajeErrorDb(error) === SIN_CONEXION) {
       return { ok: false, reintentar: true }
     }
     const mensaje = mensajeErrorDb(error)
-    if (mensaje === ERROR_DB_DESCONOCIDO) reportar(error, 'Subir pedido de la cola')
+    if (mensaje === ERROR_DB_DESCONOCIDO) reportar(error, `Subir de la cola: ${op.tipo}`)
     return { ok: false, reintentar: false, mensaje }
   } catch {
     return { ok: false, reintentar: true }
@@ -104,22 +114,40 @@ export function ColaProvider({ children }: { children: ReactNode }) {
     }
   }, [procesar])
 
+  const agregar = useCallback(
+    async (op: Operacion) => {
+      if (cola.current.some((o) => o.id === op.id)) return true
+      const ok = await escribir([...cola.current, op])
+      void procesar()
+      return ok
+    },
+    [escribir, procesar],
+  )
+
   const agregarPedido = useCallback(
-    async (pedido: PedidoParaGuardar) => {
-      if (cola.current.some((o) => o.id === pedido.id)) return true
-      const op: Operacion = {
+    (pedido: PedidoParaGuardar) =>
+      agregar({
         id: pedido.id,
         tipo: 'crear_pedido',
         datos: pedido,
         creada: new Date().toISOString(),
         intentos: 0,
         error: null,
-      }
-      const ok = await escribir([...cola.current, op])
-      void procesar()
-      return ok
-    },
-    [escribir, procesar],
+      }),
+    [agregar],
+  )
+
+  const agregarRecepcion = useCallback(
+    (recepcion: RecepcionParaGuardar) =>
+      agregar({
+        id: recepcion.id,
+        tipo: 'confirmar_recepcion',
+        datos: recepcion,
+        creada: new Date().toISOString(),
+        intentos: 0,
+        error: null,
+      }),
+    [agregar],
   )
 
   const reintentar = useCallback(
@@ -139,8 +167,26 @@ export function ColaProvider({ children }: { children: ReactNode }) {
   )
 
   const valor = useMemo<ValorCola>(
-    () => ({ pendientes, enLinea, subiendo, agregarPedido, reintentar, descartar, version }),
-    [pendientes, enLinea, subiendo, agregarPedido, reintentar, descartar, version],
+    () => ({
+      pendientes,
+      enLinea,
+      subiendo,
+      agregarPedido,
+      agregarRecepcion,
+      reintentar,
+      descartar,
+      version,
+    }),
+    [
+      pendientes,
+      enLinea,
+      subiendo,
+      agregarPedido,
+      agregarRecepcion,
+      reintentar,
+      descartar,
+      version,
+    ],
   )
   return <ContextoCola.Provider value={valor}>{children}</ContextoCola.Provider>
 }

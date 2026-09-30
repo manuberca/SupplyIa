@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { Operacion, PedidoParaGuardar } from './cola'
+import type { Operacion, PedidoParaGuardar, RecepcionParaGuardar } from './cola'
 
 export type ValorCola = {
   pendientes: Operacion[]
@@ -7,6 +7,7 @@ export type ValorCola = {
   subiendo: boolean
   /** Guarda en el celular y trata de subir enseguida. false si el celular no dejó guardar. */
   agregarPedido: (pedido: PedidoParaGuardar) => Promise<boolean>
+  agregarRecepcion: (recepcion: RecepcionParaGuardar) => Promise<boolean>
   reintentar: (id: string) => void
   descartar: (id: string) => Promise<void>
   /** Cambia cada vez que se sube algo, para que las pantallas recarguen. */

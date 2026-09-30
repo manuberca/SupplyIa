@@ -17,11 +17,13 @@
   },
   "include": [
     "vite.config.ts",
+    "funciones-locales.ts",
     "vitest.db.config.ts",
     "playwright.config.ts",
     "pwa-assets.config.ts",
     "eslint.config.js",
     "scripts",
-    "tests"
+    "tests",
+    "netlify"
   ]
 }

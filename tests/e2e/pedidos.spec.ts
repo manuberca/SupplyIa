@@ -129,7 +129,7 @@ test('un pedido hecho sin señal se sube solo al volver la señal', async ({ pag
   await expect(page.getByText('Pendiente de subir.')).toBeVisible()
   await expect(page.getByText('se sube solo cuando vuelva la señal')).toBeVisible()
   await expect(page.getByText('Sin número')).toBeVisible()
-  await expect(page.getByText('1 pedido queda guardado y se sube solo')).toBeVisible()
+  await expect(page.getByText('1 pedido: queda guardado y se sube solo')).toBeVisible()
   await captura(page, 'p2-sin-senal')
   const pedidoId = page.url().match(/pedidos\/([0-9a-f-]+)/)![1]!
   expect((await db.from('pedidos').select('id').eq('id', pedidoId)).data).toEqual([])

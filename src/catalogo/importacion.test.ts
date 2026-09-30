@@ -6,9 +6,10 @@ import {
   textoCelda,
   type Celda,
 } from './importacion'
-import type { Catalogo } from './tipos'
+import { AJUSTES_POR_DEFECTO, type Catalogo } from './tipos'
 
 const catalogo: Catalogo = {
+  ajustes: AJUSTES_POR_DEFECTO,
   unidades: [
     { id: 'u-kg', nombre: 'kg', tipo: 'peso', archivada: false },
     { id: 'u-unidad', nombre: 'unidad', tipo: 'unidad', archivada: false },
@@ -22,11 +23,19 @@ const catalogo: Catalogo = {
       whatsapp: '+5493415550000',
       dias_entrega: [],
       hora_limite: null,
+      umbral_alerta_pct: null,
       activo: true,
     },
   ],
   productos: [
-    { id: 'x-papa', proveedor_id: 'p-tito', nombre: 'Papa', unidad_base_id: 'u-kg', activo: true },
+    {
+      id: 'x-papa',
+      proveedor_id: 'p-tito',
+      nombre: 'Papa',
+      unidad_base_id: 'u-kg',
+      umbral_alerta_pct: null,
+      activo: true,
+    },
   ],
   presentaciones: [],
   precios: new Map(),

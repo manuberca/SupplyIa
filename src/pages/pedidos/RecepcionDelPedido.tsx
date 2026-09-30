@@ -1,0 +1,151 @@
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
+import { reportar } from '../../lib/errores'
+import { SIN_CONEXION } from '../../lib/errores-auth'
+import { ERROR_DB_DESCONOCIDO, mensajeErrorDb } from '../../lib/errores-db'
+import { pesos } from '../../lib/formato'
+import { puede } from '../../lib/permisos'
+import { hace } from '../../lib/tiempo'
+import { useSesionLista } from '../../sesion/contexto'
+
+type Diferencia = {
+  id: string
+  tipo: string
+  monto: number | null
+  detalle: string
+  estado: string
+}
+type Recepcion = {
+  id: string
+  recibido_at: string
+  nro_remito: string | null
+  total_remito: number | null
+  origen: string
+  diferencias: Diferencia[]
+}
+
+const ESTADOS_DIFERENCIA: Record<string, { texto: string; clase: string }> = {
+  pendiente: { texto: 'Pendiente', clase: 'pastilla--error' },
+  reclamado: { texto: 'Reclamado', clase: 'pastilla--atencion' },
+  nota_credito: { texto: 'Nota de crédito', clase: 'pastilla--info' },
+  resuelto: { texto: 'Resuelto', clase: 'pastilla--ok' },
+}
+
+/** Lo que llegó de un pedido: remito, total y diferencias (con su seguimiento). */
+export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; version: number }) {
+  const { miembro } = useSesionLista()
+  const [recepciones, setRecepciones] = useState<Recepcion[] | null>(null)
+  const [error, setError] = useState('')
+
+  const cargar = useCallback(async () => {
+    const { data, error: e } = await supabase
+      .from('recepciones')
+      .select(
+        'id, recibido_at, nro_remito, total_remito, origen, diferencias ( id, tipo, monto, detalle, estado )',
+      )
+      .eq('pedido_id', pedidoId)
+      .order('recibido_at', { ascending: false })
+    if (e) {
+      const sinRed = !navigator.onLine || /fetch/i.test(e.message)
+      if (!sinRed) reportar(e, 'Cargar recepción del pedido')
+      return { error: sinRed ? SIN_CONEXION : 'No pudimos cargar la recepción.' }
+    }
+    return { datos: data }
+  }, [pedidoId])
+
+  useEffect(() => {
+    let vigente = true
+    cargar().then((r) => {
+      if (!vigente) return
+      if ('error' in r) setError(r.error ?? '')
+      else {
+        setError('')
+        setRecepciones(r.datos)
+      }
+    })
+    return () => {
+      vigente = false
+    }
+  }, [cargar, version])
+
+  async function cambiar(id: string, estado: string) {
+    const { error: e } = await supabase.from('diferencias').update({ estado }).eq('id', id)
+    if (e) {
+      const mensaje = mensajeErrorDb(e)
+      if (mensaje === ERROR_DB_DESCONOCIDO) reportar(e, 'Cambiar estado de diferencia')
+      return setError(mensaje)
+    }
+    const r = await cargar()
+    if ('datos' in r && r.datos) setRecepciones(r.datos)
+  }
+
+  if (error && !recepciones) return <p className="aviso aviso--atencion">{error}</p>
+  if (!recepciones || recepciones.length === 0) return null
+  const puedeResolver = puede(miembro.rol, 'pedir')
+
+  return (
+    <>
+      <h2>Recepción</h2>
+      {error && (
+        <p className="aviso aviso--error" role="alert">
+          {error}
+        </p>
+      )}
+      {recepciones.map((r) => (
+        <section key={r.id} className="card formulario">
+          <dl className="datos">
+            <div>
+              <dt>Llegó</dt>
+              <dd>{hace(r.recibido_at)}</dd>
+            </div>
+            <div>
+              <dt>Remito</dt>
+              <dd className="mono">{r.nro_remito ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>Total del remito</dt>
+              <dd className="mono">{r.total_remito !== null ? pesos(r.total_remito) : '—'}</dd>
+            </div>
+            <div>
+              <dt>Cargado</dt>
+              <dd>{r.origen === 'ia' ? 'Leído con IA' : 'A mano'}</dd>
+            </div>
+          </dl>
+          {r.diferencias.length === 0 ? (
+            <p className="aviso aviso--ok">Llegó todo bien.</p>
+          ) : (
+            r.diferencias.map((d) => {
+              const estado = ESTADOS_DIFERENCIA[d.estado] ?? ESTADOS_DIFERENCIA.pendiente!
+              return (
+                <div key={d.id} className="grupo">
+                  <p className="formulario__ayuda">
+                    <span className={`pastilla ${estado.clase}`}>{estado.texto}</span>{' '}
+                    <strong>{d.detalle}</strong>
+                    {d.monto ? ` · ${pesos(Math.abs(d.monto))}` : ''}
+                  </p>
+                  {puedeResolver && d.estado !== 'resuelto' && (
+                    <div className="chips chips--chicos">
+                      {d.estado === 'pendiente' && (
+                        <button className="chip" onClick={() => cambiar(d.id, 'reclamado')}>
+                          Ya lo reclamé
+                        </button>
+                      )}
+                      {d.tipo !== 'exceso' && d.estado !== 'nota_credito' && (
+                        <button className="chip" onClick={() => cambiar(d.id, 'nota_credito')}>
+                          Mandó nota de crédito
+                        </button>
+                      )}
+                      <button className="chip" onClick={() => cambiar(d.id, 'resuelto')}>
+                        Resuelto
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </section>
+      ))}
+    </>
+  )
+}

@@ -17,15 +17,52 @@ export type PedidoParaGuardar = {
   }[]
 }
 
+/** Lo que manda la pantalla de recepción a confirmar_recepcion() (ver la migración de recepciones). */
+export type RecepcionParaGuardar = {
+  id: string
+  local_id: string
+  proveedor_id: string
+  pedido_id: string | null
+  estado_pedido: 'a_pagar' | 'revisar' | null
+  origen: 'ia' | 'manual'
+  recibido_at: string
+  foto_path: string | null
+  nro_remito: string | null
+  fecha_remito: string | null
+  total_remito: number | null
+  lectura_ia: unknown
+  observaciones: string
+  items: {
+    id: string
+    producto_id: string | null
+    texto_remito: string
+    cantidad_pedida_base: number | null
+    cantidad_base: number | null
+    precio_unit_base: number | null
+    precio_anterior_base: number | null
+    subtotal: number | null
+    resultado: string
+  }[]
+  diferencias: {
+    id: string
+    producto_id: string | null
+    tipo: string
+    monto: number | null
+    detalle: string
+  }[]
+  correcciones: { campo: string; detectado: string | null; correcto: string | null }[]
+}
+
 export type Operacion = {
   id: string
-  tipo: 'crear_pedido'
-  datos: PedidoParaGuardar
   creada: string
   intentos: number
   /** Si la base la rechazó por algo que no es la señal: se muestra con qué hacer. */
   error: string | null
-}
+} & (
+  | { tipo: 'crear_pedido'; datos: PedidoParaGuardar }
+  | { tipo: 'confirmar_recepcion'; datos: RecepcionParaGuardar }
+)
 
 export type ResultadoEnvio =
   | { ok: true }
@@ -57,4 +94,15 @@ export async function procesarCola(
     } else restantes.push({ ...op, intentos: op.intentos + 1, error: r.mensaje })
   }
   return { restantes, subidas }
+}
+
+/** "1 pedido" · "2 recepciones" · "1 pedido y 1 recepción" */
+export function queHay(ops: readonly Operacion[]): string {
+  const pedidos = ops.filter((o) => o.tipo === 'crear_pedido').length
+  const recepciones = ops.length - pedidos
+  const partes = [
+    pedidos ? `${pedidos} ${pedidos === 1 ? 'pedido' : 'pedidos'}` : '',
+    recepciones ? `${recepciones} ${recepciones === 1 ? 'recepción' : 'recepciones'}` : '',
+  ].filter(Boolean)
+  return partes.join(' y ')
 }

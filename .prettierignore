@@ -3,3 +3,4 @@ dev-dist
 diseno
 node_modules
 *.md
+src/lib/database.types.ts

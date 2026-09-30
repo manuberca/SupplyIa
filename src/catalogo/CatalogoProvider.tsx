@@ -5,7 +5,7 @@ import { SIN_CONEXION } from '../lib/errores-auth'
 import { guardar, leer } from '../offline/almacen'
 import { useSesionLista } from '../sesion/contexto'
 import { ContextoCatalogo, type EstadoCatalogo, type ValorCatalogo } from './contexto'
-import type { Catalogo, TipoUnidad, UltimoPrecio } from './tipos'
+import { AJUSTES_POR_DEFECTO, type Catalogo, type TipoUnidad, type UltimoPrecio } from './tipos'
 
 // En el celular se guarda una copia para poder pedir sin señal (SPEC §8).
 type CopiaCatalogo = Omit<Catalogo, 'precios'> & { precios: UltimoPrecio[] }
@@ -13,21 +13,27 @@ type CopiaCatalogo = Omit<Catalogo, 'precios'> & { precios: UltimoPrecio[] }
 const aCopia = (c: Catalogo): CopiaCatalogo => ({ ...c, precios: [...c.precios.values()] })
 const deCopia = (c: CopiaCatalogo): Catalogo => ({
   ...c,
+  // Las copias guardadas antes de la etapa 4 no traían los ajustes.
+  ajustes: c.ajustes ?? AJUSTES_POR_DEFECTO,
   precios: new Map(c.precios.map((p) => [p.producto_id, p])),
 })
 
 // El catálogo de un bar son decenas o cientos de filas: se carga entero una vez y se
 // recarga después de cada cambio.
 async function cargar(): Promise<EstadoCatalogo> {
-  const [unidades, proveedores, productos, presentaciones, precios] = await Promise.all([
+  const [ajustes, unidades, proveedores, productos, presentaciones, precios] = await Promise.all([
+    supabase
+      .from('ajustes')
+      .select('umbral_alerta_pct, tolerancia_peso_pct, tolerancia_unidad_pct')
+      .maybeSingle(),
     supabase.from('unidades').select('id, nombre, tipo, archivada').order('nombre'),
     supabase
       .from('proveedores')
-      .select('id, nombre, whatsapp, dias_entrega, hora_limite, activo')
+      .select('id, nombre, whatsapp, dias_entrega, hora_limite, umbral_alerta_pct, activo')
       .order('nombre'),
     supabase
       .from('productos')
-      .select('id, proveedor_id, nombre, unidad_base_id, activo')
+      .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo')
       .order('nombre'),
     supabase
       .from('presentaciones')
@@ -38,7 +44,12 @@ async function cargar(): Promise<EstadoCatalogo> {
   ])
 
   const error =
-    unidades.error ?? proveedores.error ?? productos.error ?? presentaciones.error ?? precios.error
+    ajustes.error ??
+    unidades.error ??
+    proveedores.error ??
+    productos.error ??
+    presentaciones.error ??
+    precios.error
   if (error) {
     const sinRed = !navigator.onLine || /fetch/i.test(error.message)
     if (!sinRed) reportar(error, 'No se pudo cargar el catálogo')
@@ -49,6 +60,7 @@ async function cargar(): Promise<EstadoCatalogo> {
   }
 
   const catalogo: Catalogo = {
+    ajustes: ajustes.data ?? AJUSTES_POR_DEFECTO,
     unidades: (unidades.data ?? []).map((u) => ({ ...u, tipo: u.tipo as TipoUnidad })),
     proveedores: proveedores.data ?? [],
     productos: productos.data ?? [],

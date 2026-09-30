@@ -113,6 +113,7 @@ export function PedidosProvider({ children }: { children: ReactNode }) {
 
   const valor = useMemo<ValorPedidos>(() => {
     const enCola: Pedido[] = pendientes
+      .flatMap((op) => (op.tipo === 'crear_pedido' ? [op] : []))
       .filter((op) => op.datos.local_id === local?.id)
       .filter((op) => !guardados?.some((g) => g.id === op.id))
       .map((op) => ({

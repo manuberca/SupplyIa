@@ -2,10 +2,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { funcionesLocales } from './funciones-locales'
 
 export default defineConfig({
   plugins: [
     react(),
+    funcionesLocales(),
     VitePWA({
       registerType: 'autoUpdate',
       pwaAssets: { config: true },
@@ -23,6 +25,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        // /api/… son funciones del servidor: nunca se contestan desde la caché del celular.
+        navigateFallbackDenylist: [/^\/api\//],
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       },
     }),
