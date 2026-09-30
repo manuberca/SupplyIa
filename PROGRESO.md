@@ -28,6 +28,10 @@ Se actualiza al terminar cada paso, así cualquier computadora sabe dónde segui
 - Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano.
 - Bar Demo (1 local, Centro): organización de Manu (admin) para probar a mano.
 
+## Datos en prod
+
+- Bar Demo (1 local, Centro) con Manu como admin, para probar la app publicada (creado el 30/9). No es un cliente: archivarlo cuando entre el primero.
+
 ## Decisiones
 
 - Dos proyectos de Supabase en la nube (`supplyia-dev` y `supplyia-prod`) en lugar de Supabase local, porque no hay Docker.
