@@ -9,6 +9,7 @@ App web (PWA) de compras y recepción de mercadería para gastronómicos. La esp
 - Pedime confirmación antes de: deployar a producción, correr migraciones contra la base de producción, o cualquier cosa que borre datos.
 - Cada deploy de Netlify consume créditos del mes: agrupá cambios y probá todo en local antes de subir.
 - Nunca modifiques la carpeta de la app de La Bodeguita (`labode-nueva`). Es la que usa el bar hoy. Solo se lee como referencia.
+- SupplyIA es un proyecto personal: todas sus cuentas y gastos (Anthropic, Supabase, Netlify, Sentry, GitHub) son de Manu, con su mail personal. Nunca usar cuentas, claves ni créditos de La Bodeguita, y nunca gastar desde ahí. De La Bodeguita solo se leen datos (proveedores, boletas) con las consultas de lectura de su app.
 - Textos de la app en castellano rioplatense ("Elegí", "Sacá la foto"), claros y cortos. Números en formato argentino.
 
 ## Comandos

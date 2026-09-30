@@ -63,8 +63,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Migraciones de recepción en prod (30/9, confirmado).
 - [x] **No hay fotos de remitos reales** (La Bodeguita nunca guardó fotos: lo dice su código). Criterio reemplazado, acordado con Manu: remitos de prueba armados con boletas REALES de La Bodeguita (ya controladas por su personal) → `npm run remitos:armar`, con el estilo de columnas de cada proveedor y defectos de foto; `npm run remitos:probar` los lee con la IA de verdad y puntúa solo contra lo que dicen (número, total, cantidad, precio, subtotal y producto de cada renglón). `--sin-equivalencias` mide un proveedor nuevo.
 - [x] Catálogo de La Bodeguita en Bar Demo (dev) con `npm run labode:importar` (solo lee dos JSON bajados con las consultas de lectura de su app; La Bodeguita no se toca): 26 proveedores, 271 productos, 122 equivalencias, 177 precios. Arreglos solo del lado de SupplyIA: WhatsApp de Lucas Catena (594 → 549) y Noblex duplicado de Bazar Noblex. La misma corrida arma la planilla para importarla desde la app cuando La Bodeguita pase a SupplyIA.
-- [x] Arreglo: la clave de servicio no podía usar `privado.normalizar*` (migración `privado_service_role`, aplicada en dev). **Falta en prod.**
-- [ ] Clave de Anthropic en `.env.local` y correr la prueba (12 remitos con y sin equivalencias, ~US$1-2 de API).
+- [x] Arreglo: la clave de servicio no podía usar `privado.normalizar*` (migración `privado_service_role`, en dev y prod el 30/9).
+- [ ] Cuenta PERSONAL de Anthropic (no la de La Bodeguita), clave `supplyia-dev` en `.env.local`, y correr la prueba (12 remitos con y sin equivalencias, ~US$1-2 de API).
 - [ ] Variables en Netlify (`ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` de prod) y deploy.
 
 **Listo cuando** (ajustado): los remitos de prueba armados con boletas reales se leen bien (número, total y renglones) y la carga manual funciona si la IA falla (esto último ✅). Cuando haya fotos reales, se prueban con el mismo script.
