@@ -35,9 +35,15 @@ export function mensajeErrorAuth(error: ErrorAuth): string {
 }
 
 /** Si el enlace del mail vuelve con error (vencido, ya usado), lo lee de la URL. */
+export const LINK_EN_OTRO_NAVEGADOR =
+  'Ese link no funcionó en este navegador. Abrilo en el mismo navegador donde lo pediste, o pedí uno nuevo desde acá.'
+
 export function errorEnUrl(url: URL): string {
   const params = new URLSearchParams(url.hash.replace(/^#/, ''))
   const code = params.get('error_code') ?? url.searchParams.get('error_code')
-  if (!code) return ''
-  return mensajeErrorAuth({ code })
+  if (code) return mensajeErrorAuth({ code })
+  // Si el link del mail vuelve con su código y no hay sesión, se abrió en otro navegador
+  // (el link solo sirve en el mismo navegador o app donde se pidió).
+  if (url.searchParams.has('code')) return LINK_EN_OTRO_NAVEGADOR
+  return ''
 }

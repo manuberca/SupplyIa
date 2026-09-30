@@ -6,6 +6,7 @@ export function iniciarReportes(dsn: string | undefined) {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
+    release: __VERSION__,
     // Nada de mails, IPs ni contenido: al usuario se lo identifica solo por su id.
     // Los parámetros de la URL quedan afuera porque ahí vuelven los códigos de login.
     dataCollection: {

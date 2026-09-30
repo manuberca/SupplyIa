@@ -64,6 +64,10 @@ export function Ajustes() {
             <dt>Rol</dt>
             <dd>{NOMBRE_ROL[miembro.rol]}</dd>
           </div>
+          <div>
+            <dt>Versión de la app</dt>
+            <dd>{__VERSION__}</dd>
+          </div>
         </dl>
         <button className="boton boton--secundario" onClick={cerrarSesion} disabled={saliendo}>
           <LogOut size={18} aria-hidden="true" />

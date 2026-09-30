@@ -4,7 +4,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { funcionesLocales } from './funciones-locales'
 
+// Netlify pasa el commit en COMMIT_REF al armar la app.
+const version = process.env.COMMIT_REF?.slice(0, 7) ?? 'local'
+
 export default defineConfig({
+  define: { __VERSION__: JSON.stringify(version) },
   plugins: [
     react(),
     funcionesLocales(),

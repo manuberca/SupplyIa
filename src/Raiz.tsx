@@ -1,6 +1,7 @@
 import { ErrorBoundary } from '@sentry/react'
 import { BrowserRouter } from 'react-router'
 import { App } from './App'
+import { AvisoActualizacion } from './components/AvisoActualizacion'
 import { PantallaEstado } from './components/PantallaEstado'
 import { SesionProvider } from './sesion/SesionProvider'
 
@@ -8,6 +9,7 @@ import { SesionProvider } from './sesion/SesionProvider'
 export function Raiz() {
   return (
     <ErrorBoundary fallback={<AlgoFallo />}>
+      <AvisoActualizacion />
       <SesionProvider>
         <BrowserRouter>
           <App />

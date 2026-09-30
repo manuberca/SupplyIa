@@ -6,6 +6,7 @@ import './styles/global.css'
 import './styles/app.css'
 import { PantallaEstado } from './components/PantallaEstado'
 import { revisarConfig } from './lib/config'
+import { iniciarActualizaciones } from './lib/actualizacion'
 import { iniciarReportes, reportar } from './lib/errores'
 
 const raiz = document.getElementById('root')
@@ -34,6 +35,7 @@ if (!config.ok) {
   )
 } else {
   iniciarReportes(config.config.VITE_SENTRY_DSN)
+  iniciarActualizaciones()
   // La app se importa recién ahora: al cargarse, arma el cliente de Supabase con esta configuración.
   import('./Raiz')
     .then(({ Raiz }) =>

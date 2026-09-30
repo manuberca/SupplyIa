@@ -1785,3 +1785,14 @@ a.boton {
     grid-template-columns: 110px minmax(0, 1fr) 100px;
   }
 }
+
+/* Aviso de que la app no pudo bajar la versión nueva: arriba de todo, en cualquier pantalla. */
+.aviso-actualizacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  border-radius: 0;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+}

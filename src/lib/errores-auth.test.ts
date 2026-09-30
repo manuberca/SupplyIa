@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { errorEnUrl, mensajeErrorAuth, SIN_CONEXION } from './errores-auth'
+import { errorEnUrl, LINK_EN_OTRO_NAVEGADOR, mensajeErrorAuth, SIN_CONEXION } from './errores-auth'
 
 describe('mensajeErrorAuth', () => {
   it('traduce los errores conocidos', () => {
@@ -28,6 +28,10 @@ describe('errorEnUrl', () => {
   it('lee el error del enlace del mail', () => {
     const url = new URL('http://localhost:5173/#error=access_denied&error_code=otp_expired')
     expect(errorEnUrl(url)).toMatch(/venció/)
+  })
+
+  it('el link abierto en otro navegador explica qué hacer', () => {
+    expect(errorEnUrl(new URL('http://localhost:5173/?code=abc123'))).toBe(LINK_EN_OTRO_NAVEGADOR)
   })
 
   it('no inventa errores', () => {
