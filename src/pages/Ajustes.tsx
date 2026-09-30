@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LogOut } from 'lucide-react'
 import { NOMBRE_ROL, puede } from '../lib/permisos'
 import { useSesion, useSesionLista } from '../sesion/contexto'
+import { UnidadesAjustes } from './ajustes/UnidadesAjustes'
 
 export function Ajustes() {
   const { salir, elegirLocal } = useSesion()
@@ -36,9 +37,11 @@ export function Ajustes() {
         </section>
       )}
 
+      {esAdmin && <UnidadesAjustes />}
+
       {esAdmin && (
         <section className="card pendiente">
-          <p>Umbrales, tolerancias, unidades y equipo se configuran acá a partir de la etapa 2.</p>
+          <p>Umbral de alerta, tolerancias y equipo se configuran acá más adelante.</p>
         </section>
       )}
 

@@ -36,3 +36,18 @@ export function porcentaje(valor: number): string {
   if (texto === '0') return '0%'
   return (valor > 0 ? '+' : '') + texto + '%'
 }
+
+/**
+ * Lee un número escrito a la argentina: "4,5" · "1.200" · "1.200,50" · "$ 2.900".
+ * También acepta el punto decimal ("4.5") cuando no parece separador de miles.
+ * Devuelve null si no es un número.
+ */
+export function leerNumero(texto: string | number | null | undefined): number | null {
+  if (typeof texto === 'number') return Number.isFinite(texto) ? texto : null
+  let t = (texto ?? '').replace(/[$\s]/g, '')
+  if (!t) return null
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.')
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '')
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return null
+  return Number(t)
+}

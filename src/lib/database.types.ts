@@ -37,6 +37,52 @@ export type Database = {
           },
         ]
       }
+      equivalencias: {
+        Row: {
+          id: string
+          org_id: string
+          producto_id: string
+          proveedor_id: string
+          texto_remito: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          producto_id: string
+          proveedor_id: string
+          texto_remito: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          producto_id?: string
+          proveedor_id?: string
+          texto_remito?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'equivalencias_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'equivalencias_producto_id_fkey'
+            columns: ['producto_id']
+            isOneToOne: false
+            referencedRelation: 'productos'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'equivalencias_proveedor_id_fkey'
+            columns: ['proveedor_id']
+            isOneToOne: false
+            referencedRelation: 'proveedores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       locales: {
         Row: {
           activo: boolean
@@ -122,12 +168,266 @@ export type Database = {
         }
         Relationships: []
       }
+      precios: {
+        Row: {
+          fecha: string
+          id: string
+          org_id: string
+          origen: string
+          precio_base: number
+          producto_id: string
+          proveedor_id: string
+          recepcion_id: string | null
+        }
+        Insert: {
+          fecha?: string
+          id?: string
+          org_id: string
+          origen?: string
+          precio_base: number
+          producto_id: string
+          proveedor_id: string
+          recepcion_id?: string | null
+        }
+        Update: {
+          fecha?: string
+          id?: string
+          org_id?: string
+          origen?: string
+          precio_base?: number
+          producto_id?: string
+          proveedor_id?: string
+          recepcion_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'precios_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'precios_producto_id_fkey'
+            columns: ['producto_id']
+            isOneToOne: false
+            referencedRelation: 'productos'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'precios_proveedor_id_fkey'
+            columns: ['proveedor_id']
+            isOneToOne: false
+            referencedRelation: 'proveedores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      presentaciones: {
+        Row: {
+          activa: boolean
+          aproximada: boolean
+          factor_a_base: number
+          id: string
+          nombre: string
+          org_id: string
+          producto_id: string
+        }
+        Insert: {
+          activa?: boolean
+          aproximada?: boolean
+          factor_a_base: number
+          id?: string
+          nombre: string
+          org_id: string
+          producto_id: string
+        }
+        Update: {
+          activa?: boolean
+          aproximada?: boolean
+          factor_a_base?: number
+          id?: string
+          nombre?: string
+          org_id?: string
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'presentaciones_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'presentaciones_producto_id_fkey'
+            columns: ['producto_id']
+            isOneToOne: false
+            referencedRelation: 'productos'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      productos: {
+        Row: {
+          activo: boolean
+          creado_at: string
+          id: string
+          nombre: string
+          org_id: string
+          proveedor_id: string
+          umbral_alerta_pct: number | null
+          unidad_base_id: string
+        }
+        Insert: {
+          activo?: boolean
+          creado_at?: string
+          id?: string
+          nombre: string
+          org_id: string
+          proveedor_id: string
+          umbral_alerta_pct?: number | null
+          unidad_base_id: string
+        }
+        Update: {
+          activo?: boolean
+          creado_at?: string
+          id?: string
+          nombre?: string
+          org_id?: string
+          proveedor_id?: string
+          umbral_alerta_pct?: number | null
+          unidad_base_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'productos_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'productos_proveedor_id_fkey'
+            columns: ['proveedor_id']
+            isOneToOne: false
+            referencedRelation: 'proveedores'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'productos_unidad_base_id_fkey'
+            columns: ['unidad_base_id']
+            isOneToOne: false
+            referencedRelation: 'unidades'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      proveedores: {
+        Row: {
+          activo: boolean
+          creado_at: string
+          dias_entrega: number[]
+          hora_limite: string | null
+          id: string
+          nombre: string
+          org_id: string
+          umbral_alerta_pct: number | null
+          whatsapp: string
+        }
+        Insert: {
+          activo?: boolean
+          creado_at?: string
+          dias_entrega?: number[]
+          hora_limite?: string | null
+          id?: string
+          nombre: string
+          org_id: string
+          umbral_alerta_pct?: number | null
+          whatsapp: string
+        }
+        Update: {
+          activo?: boolean
+          creado_at?: string
+          dias_entrega?: number[]
+          hora_limite?: string | null
+          id?: string
+          nombre?: string
+          org_id?: string
+          umbral_alerta_pct?: number | null
+          whatsapp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'proveedores_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      unidades: {
+        Row: {
+          archivada: boolean
+          id: string
+          nombre: string
+          org_id: string
+          tipo: string
+        }
+        Insert: {
+          archivada?: boolean
+          id?: string
+          nombre: string
+          org_id: string
+          tipo: string
+        }
+        Update: {
+          archivada?: boolean
+          id?: string
+          nombre?: string
+          org_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'unidades_org_id_fkey'
+            columns: ['org_id']
+            isOneToOne: false
+            referencedRelation: 'organizaciones'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      ultimos_precios: {
+        Row: {
+          fecha: string | null
+          precio_base: number | null
+          producto_id: string | null
+          proveedor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'precios_producto_id_fkey'
+            columns: ['producto_id']
+            isOneToOne: false
+            referencedRelation: 'productos'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'precios_proveedor_id_fkey'
+            columns: ['proveedor_id']
+            isOneToOne: false
+            referencedRelation: 'proveedores'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      importar_catalogo: { Args: { datos: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

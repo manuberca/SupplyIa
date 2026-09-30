@@ -1,11 +1,17 @@
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Outlet, Route, Routes } from 'react-router'
 import { Estructura } from './components/Estructura'
 import { PantallaEstado } from './components/PantallaEstado'
 import { Protegida } from './components/Protegida'
+import { CatalogoProvider } from './catalogo/CatalogoProvider'
 import { Ajustes } from './pages/Ajustes'
 import { Inicio } from './pages/Inicio'
 import { Login } from './pages/Login'
 import { Pendiente } from './pages/Pendiente'
+import { FichaProveedor } from './pages/proveedores/FichaProveedor'
+import { FormProducto } from './pages/proveedores/FormProducto'
+import { FormProveedor } from './pages/proveedores/FormProveedor'
+import { Importar } from './pages/proveedores/Importar'
+import { Proveedores } from './pages/proveedores/Proveedores'
 import { useSesion } from './sesion/contexto'
 
 export function App() {
@@ -44,38 +50,48 @@ export function App() {
       )
     case 'lista':
       return (
-        <Routes>
-          <Route element={<Estructura />}>
-            <Route index element={<Inicio />} />
-            <Route
-              path="pedir"
-              element={
-                <Protegida seccion="pedir">
-                  <Pendiente titulo="Nuevo pedido" etapa={3} />
-                </Protegida>
-              }
-            />
-            <Route path="recibir" element={<Pendiente titulo="Recibir mercadería" etapa={4} />} />
-            <Route
-              path="proveedores"
-              element={
-                <Protegida seccion="proveedores">
-                  <Pendiente titulo="Proveedores" etapa={2} />
-                </Protegida>
-              }
-            />
-            <Route
-              path="precios"
-              element={
-                <Protegida seccion="precios">
-                  <Pendiente titulo="Precios" etapa={5} />
-                </Protegida>
-              }
-            />
-            <Route path="ajustes" element={<Ajustes />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
+        <CatalogoProvider>
+          <Routes>
+            <Route element={<Estructura />}>
+              <Route index element={<Inicio />} />
+              <Route
+                path="pedir"
+                element={
+                  <Protegida seccion="pedir">
+                    <Pendiente titulo="Nuevo pedido" etapa={3} />
+                  </Protegida>
+                }
+              />
+              <Route path="recibir" element={<Pendiente titulo="Recibir mercadería" etapa={4} />} />
+              <Route
+                path="proveedores"
+                element={
+                  <Protegida seccion="proveedores">
+                    <Outlet />
+                  </Protegida>
+                }
+              >
+                <Route index element={<Proveedores />} />
+                <Route path="nuevo" element={<FormProveedor />} />
+                <Route path="importar" element={<Importar />} />
+                <Route path=":id" element={<FichaProveedor />} />
+                <Route path=":id/editar" element={<FormProveedor />} />
+                <Route path=":id/productos/nuevo" element={<FormProducto />} />
+                <Route path=":id/productos/:productoId" element={<FormProducto />} />
+              </Route>
+              <Route
+                path="precios"
+                element={
+                  <Protegida seccion="precios">
+                    <Pendiente titulo="Precios" etapa={5} />
+                  </Protegida>
+                }
+              />
+              <Route path="ajustes" element={<Ajustes />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </CatalogoProvider>
       )
   }
 }
