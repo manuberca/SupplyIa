@@ -33,7 +33,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Pantallas: Proveedores (lista, búsqueda, archivados), Nuevo/Editar proveedor (WhatsApp validado en vivo), Ficha (productos con unidad, presentaciones y último precio), Nuevo/Editar producto (unidad de compra, presentaciones, crear unidad), Ajustes → Unidades.
 - [x] Importación por Excel: plantilla descargable (Proveedores, Productos, Instrucciones), vista previa con errores por fila, solo agrega (lo ya cargado se deja como está), todo o nada.
 - [x] Tests: `npm run test:db` 29 (17 del catálogo) y `npm run e2e` 11 (5 del catálogo e importación). Los tests crean datos con nombres propios y al final los archivan.
-- [ ] Migraciones en prod (confirmar antes) y deploy.
+- [x] Migraciones en prod aplicadas (30/9, confirmado). La CLI quedó linkeada de nuevo a dev.
+- [ ] Deploy (push) y prueba en prod.
 
 **Listo cuando:** se carga un proveedor con productos en caja y en kg, y no se puede duplicar ni borrar nada en uso. ✅ en dev.
 
