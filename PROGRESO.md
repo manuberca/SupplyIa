@@ -2,7 +2,7 @@
 
 Se actualiza al terminar cada paso, así cualquier computadora sabe dónde seguir.
 
-## Etapa 1 — Base (en curso)
+## Etapa 1 — Base ✅ (terminada el 30/9)
 
 - [x] 1. Esqueleto: Vite + React + TS estricto, ESLint, Prettier, `.nvmrc` (Node 24), `.gitattributes`
 - [x] 2. Diseño base: tokens, tipografías, encabezado, barra inferior, pantallas vacías, formato argentino con tests
@@ -13,15 +13,21 @@ Se actualiza al terminar cada paso, así cualquier computadora sabe dónde segui
 - [ ] SMTP propio (por ejemplo Resend) antes del piloto: el correo de Supabase solo manda a miembros del equipo de Supabase, pocos por hora, y no deja cambiar el mail. Con SMTP se activa la plantilla `supabase/templates/codigo.html` (mail en castellano con el código, necesario para la app instalada en iPhone).
 - [x] 6. Sentry en el frontend: se activa con `VITE_SENTRY_DSN` (sin DSN solo va a la consola). Reporta errores no manejados, fallas al cargar la sesión y errores de login desconocidos; identifica por id de usuario, organización y rol (sin mail, IP ni parámetros de la URL). Pantalla "Algo falló" con botón para recargar. Si falta configuración, la app lo dice en pantalla en vez de quedar en blanco. **Falta:** crear el proyecto en sentry.io y poner el DSN en `.env.local` y en Netlify. Sentry en funciones, cuando exista la primera (OCR, etapa 4).
 - [x] 7. Tests: aislamiento entre organizaciones y permisos por rol (`npm run test:db`, 12 tests contra dev) y flujo de login con Playwright (`npm run e2e`, 6 tests en pantalla de celular contra dev: admin, recepción, otra organización, contraseña equivocada, mail mal escrito, cerrar sesión). La primera vez en cada computadora: `npx playwright install chromium`.
-- [~] 8. Deploy a Netlify: `netlify.toml` listo (build, caché del service worker, encabezados de seguridad; la redirección de la SPA está en `public/_redirects`). Pasos pendientes, en orden:
+- [x] 8. Deploy a Netlify: `netlify.toml` listo (build, caché del service worker, encabezados de seguridad; la redirección de la SPA está en `public/_redirects`). Pasos pendientes, en orden:
   1. ✅ `supplyia-prod` creado (ref `xrdujgrbmjgtcwxrkqer`, São Paulo, plan gratis). Contraseña de la base: `SUPABASE_PROD_DB_PASSWORD` en `.env.local` y en el gestor de contraseñas.
   2. ✅ Migración `base` aplicada en prod (30/9): 4 tablas con RLS y políticas, verificado. La CLI quedó linkeada de nuevo a dev.
   3. ✅ Auth de prod: altas cerradas (probado: `signup_disabled`), código de 6 dígitos y URL del sitio https://supplyia.netlify.app. Lo propio de prod está en `[remotes.prod]` de `supabase/config.toml`; se aplica con `npx supabase config push --project-ref xrdujgrbmjgtcwxrkqer` (sin re-linkear).
   4. ✅ Netlify: https://supplyia.netlify.app, desde GitHub, rama `main`. Variables de prod cargadas (copia local en `.env.prod.local`, ignorado por git). Tiene protección de acceso de Netlify (solo entra quien tiene sesión en Netlify): sacarla antes del piloto. Deploy previews y de otras ramas: cancelados desde `netlify.toml` (`ignore = "exit 0"`).
   5. ✅ Revisión completa antes del primer deploy (30/9). Repetirla antes de cada push a `main`: `npm run lint && npm test && npm run test:db && npm run e2e && npm run build`. **Cada push a `main` deploya y gasta créditos.**
-  6. Crear la organización real y el primer admin en prod (por invitación desde el servidor).
+  6. ✅ Login en prod probado con código por mail (Manu, Bar Demo).
 
-**Listo cuando:** dos organizaciones de prueba no ven los datos de la otra.
+**Listo cuando:** dos organizaciones de prueba no ven los datos de la otra. ✅ (`npm run test:db` y `npm run e2e`)
+
+Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netlify, plan Pro de Supabase en prod.
+
+## Etapa 2 — Catálogo (siguiente)
+
+- [ ] Plan propuesto y aprobado
 
 ## Datos en dev
 
