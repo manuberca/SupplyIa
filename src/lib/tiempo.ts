@@ -43,3 +43,17 @@ export function textoProximaEntrega(dias: readonly number[], hoy = new Date()): 
   const dia = DIAS[(diaSemana(hoy) - 1 + faltan) % 7]!
   return `Entrega el ${dia.largo}`
 }
+
+/** Día y mes: 29/9 */
+export function diaMes(fecha: string | Date): string {
+  const d = new Date(fecha)
+  return `${d.getDate()}/${d.getMonth() + 1}`
+}
+
+/** Fecha y hora: 29/9/2026 14:05 */
+export function fechaHora(fecha: string | Date): string {
+  const d = new Date(fecha)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${hh}:${mm}`
+}

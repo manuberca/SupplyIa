@@ -267,6 +267,31 @@ describe('confirmar una recepción', () => {
     expect(error?.message).toMatch(/Un pedido enviado no puede pasar a a_pagar/)
   })
 
+  it('marcar pagado guarda la fecha de pago, y un pagado no vuelve atrás', async () => {
+    const pedido = await nuevoPedido()
+    const r = recepcion(pedido, [
+      { producto_id: tomate, cantidad_base: 10, precio_unit_base: 3000, resultado: 'ok' },
+    ])
+    expect((await c.recepcionA.rpc('confirmar_recepcion', { recepcion: r })).error).toBeNull()
+    // La fecha la pone la base, no quien marca.
+    const aMano = await c.adminA
+      .from('pedidos')
+      .update({ estado: 'pagado', pagado_at: '2020-01-01T00:00:00Z' })
+      .eq('id', pedido)
+    expect(aMano.error?.code).toBe('42501')
+    const pago = await c.adminA
+      .from('pedidos')
+      .update({ estado: 'pagado' })
+      .eq('id', pedido)
+      .select('estado, pagado_at')
+      .single()
+    expect(pago.error).toBeNull()
+    expect(pago.data?.estado).toBe('pagado')
+    expect(Math.abs(Date.now() - Date.parse(pago.data!.pagado_at!))).toBeLessThan(60_000)
+    const { error } = await c.adminA.from('pedidos').update({ estado: 'a_pagar' }).eq('id', pedido)
+    expect(error?.message).toMatch(/Un pedido pagado no puede pasar a a_pagar/)
+  })
+
   it('un pedido cancelado no se puede recibir, y no queda nada guardado', async () => {
     const pedido = await nuevoPedido()
     await c.encargadoA.from('pedidos').update({ estado: 'cancelado' }).eq('id', pedido)

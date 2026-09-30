@@ -13,6 +13,15 @@ import { NuevoPedido } from './pages/pedidos/NuevoPedido'
 import { Pedidos } from './pages/pedidos/Pedidos'
 import { NuevaRecepcion } from './pages/recepcion/NuevaRecepcion'
 import { Recibir } from './pages/recepcion/Recibir'
+import { Admin } from './pages/admin/Admin'
+import { Resumen } from './pages/admin/Resumen'
+import {
+  PagosPanel,
+  PedidosPanel,
+  PreciosPanel,
+  ProveedoresPanel,
+  RecepcionesPanel,
+} from './pages/admin/Secciones'
 import { Ajustes } from './pages/Ajustes'
 import { Inicio } from './pages/Inicio'
 import { Login } from './pages/Login'
@@ -64,6 +73,22 @@ export function App() {
             <PedidosProvider>
               <ControlProvider>
                 <Routes>
+                  {/* Panel de escritorio: sin la barra de abajo, con su propio menú. */}
+                  <Route
+                    path="admin"
+                    element={
+                      <Protegida seccion="ajustes_org">
+                        <Admin />
+                      </Protegida>
+                    }
+                  >
+                    <Route index element={<Resumen />} />
+                    <Route path="pedidos" element={<PedidosPanel />} />
+                    <Route path="recepciones" element={<RecepcionesPanel />} />
+                    <Route path="proveedores" element={<ProveedoresPanel />} />
+                    <Route path="precios" element={<PreciosPanel />} />
+                    <Route path="pagos" element={<PagosPanel />} />
+                  </Route>
                   <Route element={<Estructura />}>
                     <Route index element={<Inicio />} />
                     <Route

@@ -83,10 +83,23 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 **Listo cuando:** los aumentos, el ranking y las alertas coinciden con una cuenta a mano. ✅ Cuenta independiente en Python sobre Bar Demo: Vinesco −1,7 %, Papelera +0,1 %, Quilmes +37,2 %, La Esperanza +3,4 %, idénticos a la app.
 
+## Etapa 6 — Administración (hecha en local)
+
+- [x] Plan aprobado (30/9). El Excel se arma en el navegador (misma librería que la plantilla) en vez de una función de Netlify como dice la SPEC §10: mismo archivo, sin el corte de 26 s ni gasto de funciones.
+- [x] Migración `pagos` en **dev**: `pedidos.pagado_at`, lo pone la base al marcar pagado (no se puede escribir a mano).
+- [x] Panel de escritorio en `/admin` (solo administración; link desde Ajustes), como `Admin.dc.html`: menú lateral, filtros por período (últimos 12 meses), local y proveedor en la dirección (se pueden compartir). Secciones: Resumen (compras, pedidos, cumplimiento, diferencias, cambios de precio, diferencias con su estado, compras por proveedor), Pedidos, Recepciones y remitos (detalle de renglones y foto del remito con link de 5 minutos), Proveedores y productos, Precios (aumentos / bajas / revisar unidad), Pagos (a pagar, revisar → a pagar, marcar pagado, pagados). En pantallas chicas el menú pasa arriba.
+- [x] Exportar a Excel: hojas Resumen, Compras por proveedor, Pedidos, Recepciones, Diferencias, Cambios de precio y A pagar, con los mismos cálculos que la pantalla (`src/admin/resumen.ts`).
+- [x] Cambios de precio de menos de 0,1 % no cuentan (centavos de redondeo del remito).
+- [x] Usuario de prueba `admin-demo@supplyia.test` (Bar Demo, dev): `npm run db:datos-prueba` ahora deja listos `admin-demo` y `encargado-demo` si existe Bar Demo.
+- [x] Tests: `npm test` 174, `npm run test:db` 53, `npm run e2e` 17 (el nuevo baja el Excel, lo lee y compara con la pantalla, reclama una diferencia y marca un pago).
+- [ ] Migración `pagos` en prod (pedir confirmación) y deploy junto con lo pendiente.
+
+**Listo cuando** (propuesto en el plan): el resumen de septiembre de Bar Demo coincide con una cuenta a mano y el Excel tiene los mismos números. ✅ Cuenta independiente en SQL sobre Bar Demo: $39.665.610,40 en 91 recepciones de 19 proveedores; Vinesco $6.779.591, Juanchi $5.642.856, La Esperanza $5.437.164, Quilmes $4.946.929, Cook Express $3.965.048: idéntico al panel. El Excel lo verifica el test e2e.
+
 ## Datos en dev
 
 - Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano.
-- Bar Demo (1 local, Centro): organización de Manu (admin) para probar a mano.
+- Bar Demo (1 local, Centro): organización de Manu (admin) para probar a mano, con el catálogo y el historial de La Bodeguita. Usuarios de prueba `admin-demo` y `encargado-demo` (@supplyia.test).
 
 ## Datos en prod
 

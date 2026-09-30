@@ -350,6 +350,7 @@ export type Database = {
           numero: number
           observaciones: string | null
           org_id: string
+          pagado_at: string | null
           proveedor_id: string
           subido_at: string
         }
@@ -363,6 +364,7 @@ export type Database = {
           numero: number
           observaciones?: string | null
           org_id: string
+          pagado_at?: string | null
           proveedor_id: string
           subido_at?: string
         }
@@ -376,6 +378,7 @@ export type Database = {
           numero?: number
           observaciones?: string | null
           org_id?: string
+          pagado_at?: string | null
           proveedor_id?: string
           subido_at?: string
         }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { Link } from 'react-router'
+import { LayoutDashboard, LogOut } from 'lucide-react'
 import { NOMBRE_ROL, puede } from '../lib/permisos'
 import { useSesion, useSesionLista } from '../sesion/contexto'
 import { ControlAjustes } from './ajustes/ControlAjustes'
@@ -36,6 +37,13 @@ export function Ajustes() {
             </select>
           </label>
         </section>
+      )}
+
+      {esAdmin && (
+        <Link to="/admin" className="boton boton--secundario">
+          <LayoutDashboard size={18} aria-hidden="true" />
+          Panel de administración
+        </Link>
       )}
 
       {esAdmin && <ControlAjustes />}

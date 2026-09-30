@@ -33,7 +33,7 @@ test('administración entra con contraseña y ve todas las secciones', async ({ 
   await page.getByRole('link', { name: /abrir ajustes/ }).click()
   await expect(page.getByRole('heading', { name: 'Ajustes' })).toBeVisible()
   await expect(page.getByText('Bar Prueba A')).toBeVisible()
-  await expect(page.getByText('Administración')).toBeVisible()
+  await expect(page.getByText('Administración', { exact: true })).toBeVisible()
   // Bar Prueba A tiene dos locales: aparece el selector.
   await expect(page.getByLabel('Local en el que estás')).toBeVisible()
 })

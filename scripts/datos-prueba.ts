@@ -28,7 +28,10 @@ if (!claveServicio) {
 let clave = process.env.DEV_TEST_PASSWORD
 if (!clave) {
   clave = randomBytes(18).toString('base64url')
-  appendFileSync('.env.local', `\n# Contraseña de los usuarios de prueba (solo desarrollo)\nDEV_TEST_PASSWORD=${clave}\n`)
+  appendFileSync(
+    '.env.local',
+    `\n# Contraseña de los usuarios de prueba (solo desarrollo)\nDEV_TEST_PASSWORD=${clave}\n`,
+  )
   console.log('Generé DEV_TEST_PASSWORD y la guardé en .env.local.')
 }
 
@@ -52,13 +55,43 @@ async function paso<R extends Respuesta>(
 
 await paso(
   'organizaciones',
-  db.from('organizaciones').upsert(Object.values(ORGS), { onConflict: 'id', ignoreDuplicates: true }),
+  db
+    .from('organizaciones')
+    .upsert(Object.values(ORGS), { onConflict: 'id', ignoreDuplicates: true }),
 )
 await paso('locales', db.from('locales').upsert(Object.values(LOCALES), { onConflict: 'id' }))
 
 const existentes = await paso('listar usuarios', db.auth.admin.listUsers({ perPage: 1000 }))
 
-for (const u of USUARIOS) {
+// Bar Demo (catálogo e historial de La Bodeguita, ver labode:importar): usuarios de prueba
+// para mirar la app y el panel con datos reales sin usar cuentas personales.
+const demo = await paso(
+  'buscar Bar Demo',
+  db.from('organizaciones').select('id').eq('nombre', 'Bar Demo').maybeSingle(),
+)
+const usuarios = [
+  ...USUARIOS,
+  ...(demo
+    ? ([
+        {
+          email: 'admin-demo@supplyia.test',
+          nombre: 'Admin Demo',
+          org_id: demo.id,
+          rol: 'admin',
+          locales: null,
+        },
+        {
+          email: 'encargado-demo@supplyia.test',
+          nombre: 'Encargado Demo',
+          org_id: demo.id,
+          rol: 'encargado',
+          locales: null,
+        },
+      ] as const)
+    : []),
+]
+
+for (const u of usuarios) {
   let id = existentes.users.find((x) => x.email === u.email)?.id
   if (id) {
     await paso(`actualizar ${u.email}`, db.auth.admin.updateUserById(id, { password: clave }))
@@ -71,10 +104,12 @@ for (const u of USUARIOS) {
   }
   await paso(
     `miembro ${u.email}`,
-    db.from('miembros').upsert(
-      { user_id: id, org_id: u.org_id, rol: u.rol, locales: u.locales, nombre: u.nombre },
-      { onConflict: 'user_id' },
-    ),
+    db
+      .from('miembros')
+      .upsert(
+        { user_id: id, org_id: u.org_id, rol: u.rol, locales: u.locales, nombre: u.nombre },
+        { onConflict: 'user_id' },
+      ),
   )
   console.log(`✓ ${u.email} (${u.rol})`)
 }
