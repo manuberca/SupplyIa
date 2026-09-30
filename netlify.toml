@@ -4,6 +4,14 @@
   command = "npm run build"
   publish = "dist"
 
+# Solo se publica main (SPEC §3). Los deploys de pull requests y de otras ramas
+# se cancelan antes de construir, para no gastar créditos.
+[context.deploy-preview]
+  ignore = "exit 0"
+
+[context.branch-deploy]
+  ignore = "exit 0"
+
 # La redirección de la app de una sola página está en public/_redirects.
 
 # El service worker y el manifest siempre frescos, para que la app instalada se actualice.
