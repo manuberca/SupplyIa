@@ -120,21 +120,19 @@ export function Login() {
               className="boton boton--texto"
               onClick={() => cambiarModo('codigo')}
             >
-              No tengo contraseña: mandame un código por mail
+              No tengo contraseña: mandame un mail para entrar
             </button>
           </form>
         )}
 
         {modo === 'codigo' && (
           <form className="card formulario" onSubmit={mandarCodigo} noValidate>
-            <p className="formulario__ayuda">
-              Te mandamos un mail con un código para entrar, sin contraseña.
-            </p>
+            <p className="formulario__ayuda">Te mandamos un mail para entrar, sin contraseña.</p>
             <CampoEmail valor={email} onChange={setEmail} />
             {error && <Aviso texto={error} />}
             <button className="boton boton--primario" disabled={enviando}>
               <Mail size={18} aria-hidden="true" />
-              {enviando ? 'Mandando…' : 'Mandame el código'}
+              {enviando ? 'Mandando…' : 'Mandame el mail'}
             </button>
             <button
               type="button"
@@ -149,8 +147,8 @@ export function Login() {
         {modo === 'codigo_enviado' && (
           <form className="card formulario" onSubmit={entrarConCodigo} noValidate>
             <p className="formulario__ayuda">
-              Te mandamos un mail a <strong>{email.trim()}</strong>. Escribí acá el código, o tocá
-              el enlace del mail desde este mismo dispositivo.
+              Te mandamos un mail a <strong>{email.trim()}</strong>. Tocá el enlace desde este mismo
+              dispositivo. Si el mail trae un código, escribilo acá.
             </p>
             <label className="campo">
               <span className="campo__etiqueta">Código</span>

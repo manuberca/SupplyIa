@@ -8,8 +8,8 @@ const SIN_ACCESO =
 
 const MENSAJES: Record<string, string> = {
   invalid_credentials:
-    'El mail o la contraseña no coinciden. Revisalos o entrá con un código por mail.',
-  email_not_confirmed: 'Todavía no confirmaste tu mail. Entrá con un código por mail.',
+    'El mail o la contraseña no coinciden. Revisalos o entrá con un mail sin contraseña.',
+  email_not_confirmed: 'Todavía no confirmaste tu mail. Entrá con un mail sin contraseña.',
   otp_expired: 'El código o el enlace venció o no es correcto. Pedí uno nuevo.',
   over_email_send_rate_limit:
     'Mandamos muchos mails seguidos. Esperá unos minutos y probá de nuevo.',
