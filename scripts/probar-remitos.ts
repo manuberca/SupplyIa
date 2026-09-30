@@ -19,6 +19,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../src/lib/database.types'
 import { armarLectura } from '../src/recepcion/armar-lectura'
 import { armarContexto, leerConIA } from '../netlify/functions/ocr/lector'
+import { puntuar, type RenglonVerdadero } from '../src/recepcion/puntuar'
 
 const REF_DESARROLLO = 'efyulrowgyrxqubjelor' // supplyia-dev
 
@@ -26,7 +27,12 @@ if (existsSync('.env.local')) process.loadEnvFile('.env.local')
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
-  options: { bar: { type: 'string', default: 'Bar Demo' }, proveedor: { type: 'string' } },
+  options: {
+    bar: { type: 'string', default: 'Bar Demo' },
+    proveedor: { type: 'string' },
+    // Como un proveedor nuevo: sin lo que la IA ya aprendió (equivalencias y correcciones).
+    'sin-equivalencias': { type: 'boolean', default: false },
+  },
 })
 const carpeta = positionals[0]
 const salir = (mensaje: string): never => {
@@ -67,6 +73,14 @@ const mapa: Record<string, string> = existsSync(join(carpeta!, 'proveedores.json
   ? JSON.parse(readFileSync(join(carpeta!, 'proveedores.json'), 'utf8'))
   : {}
 
+// Si la carpeta trae verdad.json (remitos:armar), cada lectura se puntúa sola.
+type Verdad = { archivo: string; nro: string; total: number; items: RenglonVerdadero[] }
+const verdades: Verdad[] = existsSync(join(carpeta!, 'verdad.json'))
+  ? JSON.parse(readFileSync(join(carpeta!, 'verdad.json'), 'utf8'))
+  : []
+let aciertosTotales = 0
+let camposTotales = 0
+
 const pesos = (n: number | null) =>
   n === null ? '—' : `$${n.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`
 const informe: string[] = [
@@ -82,6 +96,7 @@ const resumen: {
   renglones: number
   asignados: number
   estado: string
+  puntaje?: string
   error?: string
 }[] = []
 
@@ -147,11 +162,13 @@ for (const foto of fotos) {
         .filter((x) => x.activa)
         .map((x) => ({ nombre: x.nombre, factor: x.factor_a_base, aproximada: x.aproximada })),
     })),
-    equivalencias: (equivalencias.data ?? []).map((e) => ({
-      texto: e.texto_remito,
-      productoId: e.producto_id,
-    })),
-    correcciones: correcciones.data ?? [],
+    equivalencias: values['sin-equivalencias']
+      ? []
+      : (equivalencias.data ?? []).map((e) => ({
+          texto: e.texto_remito,
+          productoId: e.producto_id,
+        })),
+    correcciones: values['sin-equivalencias'] ? [] : (correcciones.data ?? []),
   })
 
   // La misma compresión que hace la app en el celular.
@@ -169,8 +186,15 @@ for (const foto of fotos) {
     })
     const l = armarLectura(leido.salida, idPorRef)
     const asignados = l.lineas.filter((x) => x.productoId).length
+    const verdad = verdades.find((v) => v.archivo === foto)
+    const p = verdad ? puntuar(l, verdad, (id) => nombres.get(id)) : null
+    if (p) {
+      aciertosTotales += p.aciertos
+      camposTotales += p.campos
+    }
+    const puntaje = p ? `${p.aciertos}/${p.campos}` : undefined
     console.log(
-      `  ${leido.ms} ms · ${l.lineas.length} renglones · ${asignados} asignados · cuentas: ${l.validacion.estado}`,
+      `  ${leido.ms} ms · ${l.lineas.length} renglones · ${asignados} asignados · cuentas: ${l.validacion.estado}${puntaje ? ` · puntaje ${puntaje}` : ''}`,
     )
     resumen.push({
       foto,
@@ -179,7 +203,23 @@ for (const foto of fotos) {
       renglones: l.lineas.length,
       asignados,
       estado: l.validacion.estado,
+      puntaje,
     })
+    if (p) {
+      const mal = p.renglones.filter(
+        (r) => !(r.encontrado && r.cantidad && r.precio && r.subtotal && r.producto),
+      )
+      informe.push(
+        `## ${foto} — puntaje ${puntaje}`,
+        '',
+        `Número ${p.nro ? '✓' : '✗'} · total ${p.total ? '✓' : '✗'}${p.sobrantes.length ? ` · leyó de más: ${p.sobrantes.join(', ')}` : ''}`,
+        ...mal.map(
+          (r) =>
+            `- ${r.texto}: ${r.encontrado ? ['cantidad', 'precio', 'subtotal', 'producto'].filter((k) => !r[k as 'cantidad']).join(', ') + ' mal' : 'no lo leyó'}`,
+        ),
+        '',
+      )
+    }
 
     informe.push(
       `## ${foto} — ${proveedor.nombre}`,
@@ -219,11 +259,17 @@ for (const foto of fotos) {
 informe.splice(
   4,
   0,
-  '| Foto | Proveedor | Tiempo | Renglones | Asignados | Cuentas |',
-  '|---|---|---:|---:|---:|---|',
+  ...(camposTotales
+    ? [
+        `**Puntaje total: ${aciertosTotales}/${camposTotales} (${((aciertosTotales / camposTotales) * 100).toFixed(1)}%)**${values['sin-equivalencias'] ? ' · sin equivalencias (como proveedor nuevo)' : ''}`,
+        '',
+      ]
+    : []),
+  '| Foto | Proveedor | Tiempo | Renglones | Asignados | Cuentas | Puntaje |',
+  '|---|---|---:|---:|---:|---|---:|',
   ...resumen.map(
     (r) =>
-      `| ${r.foto} | ${r.proveedor} | ${r.ms ? `${(r.ms / 1000).toFixed(1)} s` : '—'} | ${r.renglones} | ${r.asignados} | ${r.error ? `error: ${r.error}` : r.estado} |`,
+      `| ${r.foto} | ${r.proveedor} | ${r.ms ? `${(r.ms / 1000).toFixed(1)} s` : '—'} | ${r.renglones} | ${r.asignados} | ${r.error ? `error: ${r.error}` : r.estado} | ${r.puntaje ?? '—'} |`,
   ),
   '',
 )
@@ -233,6 +279,11 @@ const archivo = join(
 )
 writeFileSync(archivo, informe.filter((l) => l !== null).join('\n'))
 console.log(`\nInforme: ${archivo}`)
+if (camposTotales) {
+  console.log(
+    `Puntaje total: ${aciertosTotales}/${camposTotales} (${((aciertosTotales / camposTotales) * 100).toFixed(1)}%)`,
+  )
+}
 const lentos = resumen.filter((r) => r.ms > 22_000)
 if (lentos.length)
   console.log(
