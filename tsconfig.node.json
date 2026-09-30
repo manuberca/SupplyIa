@@ -15,5 +15,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["vite.config.ts", "vitest.db.config.ts", "pwa-assets.config.ts", "eslint.config.js", "scripts", "tests"]
+  "include": [
+    "vite.config.ts",
+    "vitest.db.config.ts",
+    "playwright.config.ts",
+    "pwa-assets.config.ts",
+    "eslint.config.js",
+    "scripts",
+    "tests"
+  ]
 }
