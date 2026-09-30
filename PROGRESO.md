@@ -25,7 +25,7 @@ Se actualiza al terminar cada paso, así cualquier computadora sabe dónde segui
 
 Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netlify, plan Pro de Supabase en prod.
 
-## Etapa 2 — Catálogo (en curso)
+## Etapa 2 — Catálogo ✅ (terminada el 30/9)
 
 - [x] Plan aprobado (30/9). Decisiones: las altas del catálogo van con conexión y UUID de la app (la cola sin conexión es de la etapa 3); encargado crea unidades pero solo administración las archiva.
 - [x] Migraciones `catalogo` y `catalogo_ajustes` aplicadas en **dev**: unidades (10 precargadas por organización), proveedores, productos, presentaciones, precios, equivalencias y la vista `ultimos_precios`. Nombres únicos sin mayúsculas/tildes/plural (`privado.normalizar*`, espejo en `src/lib/normalizar.ts`), WhatsApp único y en formato `+549…`, factor > 0, nada se borra (sin permiso de DELETE), unidad en uso no se archiva, todo validado contra la organización. RLS: todos leen; admin y encargado cargan; solo admin edita unidades. `importar_catalogo(jsonb)`: todo o nada.
@@ -34,9 +34,14 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Importación por Excel: plantilla descargable (Proveedores, Productos, Instrucciones), vista previa con errores por fila, solo agrega (lo ya cargado se deja como está), todo o nada.
 - [x] Tests: `npm run test:db` 29 (17 del catálogo) y `npm run e2e` 11 (5 del catálogo e importación). Los tests crean datos con nombres propios y al final los archivan.
 - [x] Migraciones en prod aplicadas (30/9, confirmado). La CLI quedó linkeada de nuevo a dev.
-- [ ] Deploy (push) y prueba en prod.
+- [x] Deploy y prueba en prod: Manu cargó un proveedor con su WhatsApp y un producto en kg con caja; el duplicado se rechazó.
+- Nota: el push se hace desde GitHub Desktop (**Push origin**); la terminal de esta Mac no tiene credenciales de GitHub.
 
-**Listo cuando:** se carga un proveedor con productos en caja y en kg, y no se puede duplicar ni borrar nada en uso. ✅ en dev.
+**Listo cuando:** se carga un proveedor con productos en caja y en kg, y no se puede duplicar ni borrar nada en uso. ✅ (dev y prod)
+
+## Etapa 3 — Pedidos (siguiente)
+
+- [ ] Plan propuesto y aprobado
 
 ## Datos en dev
 
