@@ -20,7 +20,8 @@ export type Puntaje = {
     cantidad: boolean
     precio: boolean
     subtotal: boolean
-    producto: boolean
+    /** null: el producto esperado no existe en el catálogo (no se puede acertar, no cuenta). */
+    producto: boolean | null
   }[]
   sobrantes: string[]
   aciertos: number
@@ -52,6 +53,8 @@ export function puntuar(
   lectura: Lectura,
   verdad: { nro: string; total: number; items: RenglonVerdadero[] },
   nombreDeProducto: (id: string) => string | undefined,
+  /** Si el producto esperado existe en el catálogo del bar (si no, el producto no se puntúa). */
+  existeProducto: (nombre: string) => boolean = () => true,
 ): Puntaje {
   const libres = new Set(lectura.lineas.map((_, i) => i))
   const renglones = verdad.items.map((v) => {
@@ -68,7 +71,7 @@ export function puntuar(
         cantidad: false,
         precio: false,
         subtotal: false,
-        producto: false,
+        producto: existeProducto(v.producto) ? false : null,
       }
     }
     libres.delete(mejor)
@@ -79,8 +82,9 @@ export function puntuar(
       cantidad: cerca(l.cantidad, v.cantidad, 0.001),
       precio: cerca(l.precioUnit, v.precio),
       subtotal: cerca(l.subtotal, v.subtotal),
-      producto:
-        !!l.productoId && normalizar(nombreDeProducto(l.productoId)) === normalizar(v.producto),
+      producto: existeProducto(v.producto)
+        ? !!l.productoId && normalizar(nombreDeProducto(l.productoId)) === normalizar(v.producto)
+        : null,
     }
   })
   const nro =
@@ -99,6 +103,6 @@ export function puntuar(
     renglones,
     sobrantes: [...libres].map((i) => lectura.lineas[i]!.texto),
     aciertos,
-    campos: 2 + renglones.length * 4,
+    campos: 2 + renglones.reduce((s, r) => s + (r.producto === null ? 3 : 4), 0),
   }
 }

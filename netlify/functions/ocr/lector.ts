@@ -7,15 +7,17 @@ import { z } from 'zod'
 import { salidaModeloSchema, type SalidaModelo } from '../../../src/recepcion/lectura'
 import { contextoDelRemito, SISTEMA } from './prompt'
 
-// Opus 5.5: 20% más barato que el Opus 5 que usa La Bodeguita. Esfuerzo bajo: en las
-// mediciones de La Bodeguita leía MEJOR que el medio o el alto, porque lo que faltaba era
-// tiempo (Netlify corta cerca de los 26 s), no razonamiento. No subirlo sin volver a medir.
+// Sonnet 5.5, medido el 30/9 con 12 remitos armados de boletas reales de La Bodeguita
+// (npm run remitos:armar / remitos:probar), mismo prompt y esfuerzo bajo:
+//   Opus 5.5    7 de 12 a tiempo (5 cortados a los 24 s) · 92,3 % de campos bien
+//   Sonnet 5.5  12 de 12 · 3,3 a 7,9 s · 96,9 % · la mitad de precio
+// Netlify corta cerca de los 26 s, así que la velocidad manda. No cambiarlo sin volver a medir.
 // Todo se cambia con variables de entorno, sin redeployar.
 const ESFUERZOS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 type Esfuerzo = (typeof ESFUERZOS)[number]
 
 export const configuracion = () => ({
-  modelo: process.env.OCR_MODEL || 'claude-opus-5-5',
+  modelo: process.env.OCR_MODEL || 'claude-sonnet-5-5',
   esfuerzo: ESFUERZOS.find((e) => e === process.env.OCR_EFFORT) ?? ('low' as Esfuerzo),
   plazoMs: Number(process.env.OCR_DEADLINE_MS || 24_000), // Netlify corta a ~26 s: 2 s de margen
 })
@@ -88,7 +90,7 @@ export async function leerConIA(datos: {
       {
         model: modelo,
         max_tokens: 16_000,
-        // Opus 5.5 siempre piensa; el esfuerzo es lo que regula cuánto.
+        // Piensa de forma adaptativa; el esfuerzo (bajo) regula cuánto.
         thinking: { type: 'adaptive' },
         output_config: {
           effort: esfuerzo,

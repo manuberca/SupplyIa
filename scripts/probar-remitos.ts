@@ -20,6 +20,7 @@ import type { Database } from '../src/lib/database.types'
 import { armarLectura } from '../src/recepcion/armar-lectura'
 import { armarContexto, leerConIA } from '../netlify/functions/ocr/lector'
 import { puntuar, type RenglonVerdadero } from '../src/recepcion/puntuar'
+import { normalizar } from '../src/lib/normalizar'
 
 const REF_DESARROLLO = 'efyulrowgyrxqubjelor' // supplyia-dev
 
@@ -32,6 +33,8 @@ const { values, positionals } = parseArgs({
     proveedor: { type: 'string' },
     // Como un proveedor nuevo: sin lo que la IA ya aprendió (equivalencias y correcciones).
     'sin-equivalencias': { type: 'boolean', default: false },
+    // Solo algunas fotos, separadas por coma (por ejemplo, las que fallaron).
+    solo: { type: 'string' },
   },
 })
 const carpeta = positionals[0]
@@ -61,9 +64,13 @@ const { data: org } = await db
   .maybeSingle()
 if (!org) salir(`No encontré la organización "${values.bar}" en dev.`)
 
+const soloEstas = values.solo ? new Set(values.solo.split(',').map((x) => x.trim())) : null
 const fotos = readdirSync(carpeta!)
   .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+  .filter((f) => !soloEstas || soloEstas.has(f))
   .sort()
+// Lo leído queda guardado: se puede volver a puntuar o revisar sin gastar otra lectura.
+const lecturas: Record<string, unknown> = {}
 if (fotos.length === 0)
   salir(
     'No hay fotos .jpg, .png o .webp en esa carpeta. (Las .heic del iPhone: exportalas como JPG.)',
@@ -187,7 +194,16 @@ for (const foto of fotos) {
     const l = armarLectura(leido.salida, idPorRef)
     const asignados = l.lineas.filter((x) => x.productoId).length
     const verdad = verdades.find((v) => v.archivo === foto)
-    const p = verdad ? puntuar(l, verdad, (id) => nombres.get(id)) : null
+    lecturas[foto] = { ms: leido.ms, modelo: leido.modelo, uso: leido.uso, lectura: l }
+    const existe = new Set([...nombres.values()].map((n) => normalizar(n)))
+    const p = verdad
+      ? puntuar(
+          l,
+          verdad,
+          (id) => nombres.get(id),
+          (n) => existe.has(normalizar(n)),
+        )
+      : null
     if (p) {
       aciertosTotales += p.aciertos
       camposTotales += p.campos
@@ -207,7 +223,7 @@ for (const foto of fotos) {
     })
     if (p) {
       const mal = p.renglones.filter(
-        (r) => !(r.encontrado && r.cantidad && r.precio && r.subtotal && r.producto),
+        (r) => !(r.encontrado && r.cantidad && r.precio && r.subtotal && r.producto !== false),
       )
       informe.push(
         `## ${foto} — puntaje ${puntaje}`,
@@ -215,7 +231,7 @@ for (const foto of fotos) {
         `Número ${p.nro ? '✓' : '✗'} · total ${p.total ? '✓' : '✗'}${p.sobrantes.length ? ` · leyó de más: ${p.sobrantes.join(', ')}` : ''}`,
         ...mal.map(
           (r) =>
-            `- ${r.texto}: ${r.encontrado ? ['cantidad', 'precio', 'subtotal', 'producto'].filter((k) => !r[k as 'cantidad']).join(', ') + ' mal' : 'no lo leyó'}`,
+            `- ${r.texto}: ${r.encontrado ? ['cantidad', 'precio', 'subtotal', 'producto'].filter((k) => r[k as 'cantidad'] === false).join(', ') + ' mal' : 'no lo leyó'}`,
         ),
         '',
       )
@@ -278,6 +294,7 @@ const archivo = join(
   `informe-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.md`,
 )
 writeFileSync(archivo, informe.filter((l) => l !== null).join('\n'))
+writeFileSync(archivo.replace(/\.md$/, '.json'), JSON.stringify(lecturas, null, 2))
 console.log(`\nInforme: ${archivo}`)
 if (camposTotales) {
   console.log(

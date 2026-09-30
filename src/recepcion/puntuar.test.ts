@@ -82,4 +82,15 @@ describe('puntuar', () => {
     expect(parecido('Queso Dambo', 'Queso Provolone')).toBe(0.5)
     expect(parecido('', 'algo')).toBe(0)
   })
+
+  it('si el producto esperado no existe en el catálogo, el producto no se puntúa', () => {
+    const p = puntuar(
+      lectura([linea('Queso Dambo', 2, 1000, null), linea('PALADINI J COCIDO X6KG', 1, 1000, 'a')]),
+      verdad,
+      (id) => nombres[id],
+      (nombre) => nombre !== 'Queso Dambo',
+    )
+    expect(p.renglones.find((r) => r.texto === 'Queso Dambo')?.producto).toBeNull()
+    expect([p.aciertos, p.campos]).toEqual([9, 9])
+  })
 })
