@@ -113,7 +113,7 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Cerrar sesión cierra solo ese dispositivo (antes cortaba la sesión de la misma persona en todos).
 - [x] Tests: `npm test` 184, `npm run test:db` 65 (12 de equipo y locales, con la invitación real), `npm run e2e` 20.
 - [x] Migración `equipo` en prod (1/10, confirmado y verificado).
-- [ ] Deploy (push) y probar Ajustes → Equipo en prod.
+- [x] Deploy `f05759a` (1/10): Ajustes → Locales y Equipo vistos en prod por Manu.
 - [ ] SMTP con Resend (lo crea Manu con su mail personal): sin eso los mails de entrada no llegan a gente de afuera.
 - [ ] Alta de los dos bares del piloto con `cliente:alta --prod`.
 
