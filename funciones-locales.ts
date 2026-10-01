@@ -7,6 +7,7 @@ import { loadEnv, type Plugin } from 'vite'
 const FUNCIONES: Record<string, string> = {
   '/api/ocr': '/netlify/functions/ocr/ocr.mts',
   '/api/equipo': '/netlify/functions/equipo/equipo.mts',
+  '/api/salud': '/netlify/functions/salud/salud.mts',
 }
 
 async function leerCuerpo(req: IncomingMessage): Promise<Buffer> {

@@ -11,13 +11,12 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../../src/lib/database.types'
 import { pedidoLecturaSchema, type RespuestaLectura } from '../../../src/recepcion/lectura'
 import { armarLectura } from '../../../src/recepcion/armar-lectura'
+import { iniciarSentry, secreto } from '../../lib/entorno'
 import { armarContexto, ErrorDeLectura, leerConIA, mensajeDeLaApi } from './lector'
 
 export const config = { path: '/api/ocr' }
 
-if (process.env.VITE_SENTRY_DSN) {
-  Sentry.init({ dsn: process.env.VITE_SENTRY_DSN, environment: process.env.CONTEXT ?? 'local' })
-}
+iniciarSentry()
 
 class ErrorParaMostrar extends Error {
   constructor(
@@ -64,8 +63,8 @@ export default async function handler(req: Request): Promise<Response> {
 
   const url = process.env.VITE_SUPABASE_URL
   const clavePublica = process.env.VITE_SUPABASE_ANON_KEY
-  const claveServicio = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !clavePublica || !claveServicio || !process.env.ANTHROPIC_API_KEY) {
+  const claveServicio = secreto('SUPABASE_SERVICE_ROLE_KEY').valor
+  if (!url || !clavePublica || !claveServicio || !secreto('ANTHROPIC_API_KEY').valor) {
     Sentry.captureMessage('Falta configurar la función ocr')
     await Sentry.flush(2000)
     return responder(

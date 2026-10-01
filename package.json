@@ -25,7 +25,8 @@
     "remitos:probar": "tsx scripts/probar-remitos.ts",
     "labode:importar": "tsx scripts/importar-labode.ts",
     "remitos:armar": "tsx scripts/remitos-sinteticos.ts",
-    "cliente:alta": "tsx scripts/alta-cliente.ts"
+    "cliente:alta": "tsx scripts/alta-cliente.ts",
+    "prod:probar": "tsx scripts/probar-prod.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

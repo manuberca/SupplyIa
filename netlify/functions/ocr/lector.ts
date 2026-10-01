@@ -3,6 +3,7 @@
 // remitos reales (scripts/probar-remitos.ts), así los dos leen exactamente igual.
 
 import Anthropic from '@anthropic-ai/sdk'
+import { limpiarSecreto } from '../../../src/lib/secreto'
 import { z } from 'zod'
 import { salidaModeloSchema, type SalidaModelo } from '../../../src/recepcion/lectura'
 import { contextoDelRemito, SISTEMA } from './prompt'
@@ -83,7 +84,11 @@ export async function leerConIA(datos: {
   const modelo = datos.modelo ?? config.modelo
   const esfuerzo = datos.esfuerzo ?? config.esfuerzo
   const inicio = Date.now()
-  const cliente = new Anthropic({ timeout: config.plazoMs, maxRetries: 0 })
+  const cliente = new Anthropic({
+    apiKey: limpiarSecreto('ANTHROPIC_API_KEY', process.env.ANTHROPIC_API_KEY).valor,
+    timeout: config.plazoMs,
+    maxRetries: 0,
+  })
 
   const pedir = (restante: number) =>
     cliente.beta.messages.create(

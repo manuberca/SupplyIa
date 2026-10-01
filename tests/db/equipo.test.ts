@@ -284,6 +284,41 @@ describe('contraseña nueva para alguien del equipo', () => {
   })
 })
 
+describe('claves mal pegadas en el panel de Netlify', () => {
+  it('las funciones las limpian y el chequeo de salud lo avisa, sin mostrar la clave', async () => {
+    const buena = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    // Como si se hubieran pegado varios renglones del archivo en vez de solo la clave.
+    process.env.SUPABASE_SERVICE_ROLE_KEY = `VITE_ALGO=x\nSUPABASE_SERVICE_ROLE_KEY="${buena}"\n`
+    try {
+      const salud = (await import('../../netlify/functions/salud/salud.mts')).default
+      const token = (await c.adminA.auth.getSession()).data.session!.access_token
+      const pedir = (t: string | null) =>
+        salud(
+          new Request('http://localhost:5173/api/salud', {
+            method: 'POST',
+            headers: t ? { Authorization: `Bearer ${t}` } : {},
+          }),
+        )
+      expect((await pedir(null)).status).toBe(401)
+      const respuesta = await pedir(token)
+      const texto = await respuesta.text()
+      expect(texto).not.toContain(buena)
+      expect(JSON.parse(texto)).toMatchObject({
+        ok: true,
+        supabase: 'ok',
+        clavesCorregidas: ['SUPABASE_SERVICE_ROLE_KEY'],
+      })
+      // Y sumar gente sigue andando con la clave así.
+      const r = await invitar(c.adminA, { ...invitacion, email: 'sin-arroba' })
+      expect(r.status).toBe(400)
+      const repetido = await invitar(c.adminA, { accion: 'nueva_clave', userId: randomUUID() })
+      expect(repetido.cuerpo).toEqual({ ok: false, error: 'Esa persona no está en tu equipo.' })
+    } finally {
+      process.env.SUPABASE_SERVICE_ROLE_KEY = buena
+    }
+  })
+})
+
 describe('locales', () => {
   it('administración agrega, renombra y archiva; el encargado no', async () => {
     const id = randomUUID()

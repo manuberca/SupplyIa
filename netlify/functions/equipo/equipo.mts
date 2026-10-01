@@ -12,13 +12,12 @@ import {
   pedidoEquipoSchema,
   type RespuestaEquipo,
 } from '../../../src/equipo/esquemas'
+import { iniciarSentry, secreto } from '../../lib/entorno'
 import { ErrorParaMostrar, json, origenPermitido } from '../../lib/http'
 
 export const config = { path: '/api/equipo' }
 
-if (process.env.VITE_SENTRY_DSN) {
-  Sentry.init({ dsn: process.env.VITE_SENTRY_DSN, environment: process.env.CONTEXT ?? 'local' })
-}
+iniciarSentry()
 
 const responder = (cuerpo: RespuestaEquipo, status = 200, origen?: string | null) =>
   json(cuerpo, status, origen)
@@ -31,7 +30,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   const url = process.env.VITE_SUPABASE_URL
   const clavePublica = process.env.VITE_SUPABASE_ANON_KEY
-  const claveServicio = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const claveServicio = secreto('SUPABASE_SERVICE_ROLE_KEY').valor
   if (!url || !clavePublica || !claveServicio) {
     Sentry.captureMessage('Falta configurar la función equipo')
     await Sentry.flush(2000)
