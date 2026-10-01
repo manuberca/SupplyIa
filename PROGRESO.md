@@ -116,7 +116,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Deploy `f05759a` (1/10): Ajustes → Locales y Equipo vistos en prod por Manu.
 - [x] **Sin mails para el piloto** (decisión de Manu, 1/10): al sumar a alguien, el servidor le genera una **contraseña provisoria** (`k7mq-p9xw-4hnd`), que se muestra una sola vez para pasársela (botón de WhatsApp). Administración puede generarle otra desde Editar → Nueva contraseña (no la propia, ni la de otro bar). Cada persona la cambia en Ajustes → Cambiar contraseña; mientras sea provisoria, la app se lo recuerda arriba. `cliente:alta` también le da una al primer administrador.
 - [x] Tests: `npm test` 186, `npm run test:db` 69, `npm run e2e` 20 (el de equipo entra como la persona invitada, cambia la contraseña y vuelve a entrar).
-- [ ] Deploy de las contraseñas provisorias (sin migración nueva).
+- [x] Deploy `6924572` (1/10): contraseñas provisorias publicadas; `/api/equipo` en línea (401 sin sesión).
+- [ ] Manu: ponerse una contraseña en prod y probar el circuito completo con una persona de prueba.
 - [ ] SMTP con Resend + dominio propio: queda para cuando se venda (hoy "mandame un mail" solo le llega a Manu). No traba el piloto.
 - [ ] Alta de los dos bares del piloto con `cliente:alta --prod` (Manu todavía no definió cuáles).
 
