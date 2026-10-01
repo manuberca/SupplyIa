@@ -139,7 +139,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 ## Datos en prod
 
-- Bar Demo (1 local, Centro) con Manu como admin, para probar la app publicada (creado el 30/9). No es un cliente: archivarlo cuando entre el primero.
+- Bar Demo (1 local, Centro) con Manu como admin: el bar ficticio para probar y mostrar la app publicada. Desde el 1/10 tiene el catálogo y el historial de La Bodeguita (`labode:importar … --prod --historial --confirmar`): 26 proveedores, 271 productos, 122 equivalencias, 382 recepciones de jun–sep (septiembre: $39.665.610, igual que en dev), más lo que cargó Manu a mano (proveedor "manu", pedido #0001). **Ojo:** los WhatsApp de los proveedores son los reales de La Bodeguita: no mandar pedidos de prueba desde ahí.
+- Bar de Pruebas SupplyIA (usuarios `pruebas-*@supplyia.test`): lo crea y lo usa `npm run prod:probar`. No tocarlo a mano.
 
 ## Decisiones
 

@@ -6,11 +6,11 @@
 //
 // Uso:
 //   npm run labode:importar -- --maestros <maestros.json> --boletas <boletas.json> [--bar "Bar Demo"]
-//                              [--excel <salida.xlsx>] [--confirmar]
+//                              [--excel <salida.xlsx>] [--historial] [--prod] [--confirmar]
 //
 // Sin --confirmar solo muestra qué haría. Con --excel arma la planilla con el formato de la app
 // (Importar desde Excel), para cargarla desde la pantalla cuando La Bodeguita pase a SupplyIA.
-// Solo escribe en la base de DESARROLLO.
+// Escribe en la base de DESARROLLO; con --prod, en producción (para un bar de demostración).
 
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
@@ -27,7 +27,7 @@ import {
 import { AJUSTES_POR_DEFECTO, type Catalogo, type TipoUnidad } from '../src/catalogo/tipos'
 import { normalizar, normalizarUnidad } from '../src/lib/normalizar'
 
-const REF_DESARROLLO = 'efyulrowgyrxqubjelor' // supplyia-dev
+const REF = { dev: 'efyulrowgyrxqubjelor', prod: 'xrdujgrbmjgtcwxrkqer' } as const
 
 type Maestros = {
   proveedores: { nombre: string; telefono: string; notas?: string }[]
@@ -137,6 +137,8 @@ const { values } = parseArgs({
     confirmar: { type: 'boolean', default: false },
     // Además, las boletas como recepciones pasadas (historial de precios y gasto, para Control).
     historial: { type: 'boolean', default: false },
+    // Contra producción (.env.prod.local), para un bar de demostración. Por defecto, desarrollo.
+    prod: { type: 'boolean', default: false },
   },
 })
 const salir = (m: string): never => {
@@ -265,11 +267,16 @@ if (values.excel) {
 }
 
 // ─── Validar contra el catálogo del bar (misma lógica que la pantalla de importar) ───
-if (existsSync('.env.local')) process.loadEnvFile('.env.local')
+const entorno = values.prod ? 'prod' : 'dev'
+const archivoEnv = values.prod ? '.env.prod.local' : '.env.local'
+if (existsSync(archivoEnv)) process.loadEnvFile(archivoEnv)
 const url = process.env.VITE_SUPABASE_URL ?? ''
-if (!url.includes(REF_DESARROLLO))
-  salir(`Solo escribe en la base de desarrollo (${REF_DESARROLLO}).`)
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) salir('Falta SUPABASE_SERVICE_ROLE_KEY en .env.local.')
+// Nunca el entorno equivocado: la dirección tiene que ser la del proyecto esperado.
+if (!url.includes(REF[entorno]))
+  salir(`${archivoEnv} no apunta a supplyia-${entorno} (${REF[entorno]}).`)
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY)
+  salir(`Falta SUPABASE_SERVICE_ROLE_KEY en ${archivoEnv}.`)
+console.log(`Base: supplyia-${entorno.toUpperCase()}`)
 const db = createClient<Database>(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
@@ -279,7 +286,7 @@ const { data: org } = await db
   .select('id, nombre')
   .eq('nombre', values.bar!)
   .maybeSingle()
-if (!org) salir(`No encontré "${values.bar}" en dev.`)
+if (!org) salir(`No encontré "${values.bar}" en ${entorno}.`)
 
 // Las unidades que usa La Bodeguita y el bar todavía no tiene.
 const { data: unidadesBar } = await db
@@ -381,7 +388,7 @@ for (const [nombre, paso] of pasos) {
   if (error) salir(`Falló al importar ${nombre}: ${JSON.stringify(error)}`)
   console.log(`✓ ${nombre}`)
 }
-console.log(`\nListo: catálogo de La Bodeguita cargado en ${org!.nombre} (dev).`)
+console.log(`\nListo: catálogo de La Bodeguita cargado en ${org!.nombre} (${entorno}).`)
 
 // ─── Historial: las boletas como recepciones pasadas ──────────────────────
 if (values.historial) {
@@ -529,5 +536,5 @@ if (values.historial) {
     corregidos++
   }
   if (corregidos) console.log(`✓ fecha del último precio corregida en ${corregidos} productos`)
-  console.log(`Listo: historial de La Bodeguita en ${org!.nombre} (dev).`)
+  console.log(`Listo: historial de La Bodeguita en ${org!.nombre} (${entorno}).`)
 }
