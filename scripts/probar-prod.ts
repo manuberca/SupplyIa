@@ -165,8 +165,9 @@ if (salud.cuerpo?.ok) {
     salud.cuerpo.anthropic === 'ok',
     salud.cuerpo.anthropic,
   )
-  const forma = salud.cuerpo.formas.supabase
-  if (salud.cuerpo.supabase !== 'ok')
+  // `formas` solo viene si lo publicado ya tiene el chequeo nuevo.
+  const forma = salud.cuerpo.formas?.supabase
+  if (salud.cuerpo.supabase !== 'ok' && forma)
     console.log(
       `  ! En Netlify, SUPABASE_SERVICE_ROLE_KEY tiene ${forma.largo} caracteres, formato "${forma.formato}"${forma.rol ? `, rol ${forma.rol}` : ''}${forma.proyecto ? `, proyecto ${forma.proyecto}` : ''}. Tiene que ser un JWT con rol service_role del proyecto ${salud.cuerpo.proyecto}.`,
     )

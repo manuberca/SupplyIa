@@ -97,7 +97,7 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 
 **Listo cuando** (propuesto en el plan): el resumen de septiembre de Bar Demo coincide con una cuenta a mano y el Excel tiene los mismos números. ✅ Cuenta independiente en SQL sobre Bar Demo: $39.665.610,40 en 91 recepciones de 19 proveedores; Vinesco $6.779.591, Juanchi $5.642.856, La Esperanza $5.437.164, Quilmes $4.946.929, Cook Express $3.965.048: idéntico al panel. El Excel lo verifica el test e2e.
 
-## Etapa 7 — Piloto (en curso)
+## Etapa 7 — Piloto (lista para arrancar: falta definir los bares)
 
 - [x] Protección de acceso de Netlify sacada (30/9): contestaba 401 al pedir la versión nueva y la app instalada seguía en la etapa 1 sin avisar. La app se protege sola (login, altas cerradas, RLS).
 - [x] La app avisa si no puede bajar la versión nueva (y lo reporta a Sentry), muestra la versión en Ajustes, y explica qué hacer si el link del mail se abre en otro navegador.
@@ -122,7 +122,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] **Fotos reales de boletas de La Bodeguita** (8, en `~/Downloads/boletas_test`), leídas con la IA de verdad en dev (Bar Demo): Cook Express, Juanchi, Speed y Climp exactas; La Esperanza exacta después de corregir la regla de la columna KG (quesos y fiambres por kilo: el ejemplo heredado estaba al revés); Papelera y Vinesco con los renglones bien pero sin el total en la foto (se carga a mano); Quilmes (de costado y muy densa) solo salió bien enderezada: 12 de 12 subtotales, 2 cantidades mal. Todas dentro del tiempo (4,9 a 19,5 s).
 - [x] El control del total acepta los impuestos que leyó la IA (impuestos internos y percepciones de bebidas), y un regalo en $0 no cuenta como "sin precio".
 - [x] Deploy `8b3ea37` (1/10) y `prod:probar`: sitio, versión y **clave de Anthropic OK en prod**. La de Supabase sigue mal: lo cargado en Netlify no es la clave (Supabase responde "Not a JWT"; no era un problema de pegado que se pudiera limpiar). `/api/salud` ahora dice la forma de cada clave (largo, formato, rol y proyecto; nunca el valor).
-- [ ] Manu pega de nuevo `SUPABASE_SERVICE_ROLE_KEY` en Netlify (se le deja en el portapapeles, sin mostrarla) → deploy → `npm run prod:probar -- --foto ~/Downloads/boletas_test`.
+- [x] Manu volvió a pegar `SUPABASE_SERVICE_ROLE_KEY` en Netlify (1/10) y se republicó. **`npm run prod:probar -- --foto ~/Downloads/boletas_test`: todo bien en producción** — las dos claves funcionan, equipo y contraseñas (15 controles), aislamiento entre bares, baja sin borrar, y las 8 fotos reales leídas por la IA en prod en 6,1 a 18,4 s, con los mismos números y totales que en dev.
+- [ ] Correr `npm run prod:probar` después de cada deploy (con `--foto` cuando cambie algo de la lectura).
 - [x] **Fotos de costado se enderezan solas** (1/10): la IA avisa si la foto está girada (`giro`); si además la lectura salió dudosa (un cuarto de los renglones, mínimo 2), la app la gira en el celular y la lee de nuevo mandando las dos orientaciones (90° y 270°) para que la IA use la derecha: decir el lado le cuesta (en Quilmes dijo 90° y era 270°), elegir entre dos no. Se queda con la mejor de las dos lecturas y guarda la foto derecha. Una foto de costado que se leyó bien no se relee.
 - [x] Quilmes real, por la app: 2 lecturas, ~25 s, número y total exactos, los 12 subtotales suman el neto de la boleta ($746.148,39), cuentas verificadas con impuestos internos y percepciones (pie de Quilmes explicado en el prompt), 11 productos asignados. Queda 1 cantidad mal (Stella 0.0: 1 en vez de 2).
 - [x] La pantalla ya no pierde el descuento de cada renglón (daba "renglones dudosos" falsos).
