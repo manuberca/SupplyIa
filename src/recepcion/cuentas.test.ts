@@ -52,6 +52,29 @@ describe('chequearCuentas (total de la boleta contra los renglones)', () => {
     expect(chequearCuentas([{ cantidad: 10, precio: 1000, subtotal: 9000 }], 9000).nota).toBeNull()
   })
 
+  it('impuestos internos y percepciones leídos por la IA también cierran (Quilmes)', () => {
+    // Boleta real: renglones $746.148,39 y total $1.038.171,51 (+39 %: no es solo IVA).
+    const sinImpuestos = chequearCuentas([r(1, 746148.39)], 1038171.51)
+    expect(sinImpuestos.estado).toBe('revisar')
+    const c = chequearCuentas([r(1, 746148.39)], 1038171.51, 292023.12)
+    expect(c.estado).toBe('ok')
+    expect(c.nota).toBe(
+      'La boleta dice $1.038.172: la diferencia son los impuestos ($292.023), las cuentas cierran.',
+    )
+  })
+
+  it('un regalo (precio o subtotal en 0) no cuenta como producto sin precio', () => {
+    const c = chequearCuentas(
+      [
+        { cantidad: 8, precio: 49368, subtotal: 394944 },
+        { cantidad: 4, precio: 49368, subtotal: 0 },
+        { cantidad: 6, precio: 0, subtotal: 0 },
+      ],
+      394944,
+    )
+    expect(c).toMatchObject({ estado: 'ok', sinPrecio: 0, suma: 394944 })
+  })
+
   it('si faltan precios no acusa de más: cuenta los que no tienen precio', () => {
     const c = chequearCuentas([r(10, 1000), r(3, null), r(0, null)], 15000)
     expect(c.estado).toBe('ok')

@@ -96,8 +96,8 @@ OJO: la CANTIDAD está a la IZQUIERDA del todo. Hay varias columnas de precio: u
 FORMATO Alto Sur / La Esperanza (Factura, "0023-..." — con columna KG separada):
 [CODIGO] [CANT] [KG] [DESCRIPCION] [Alic] [PRECIO] [BON] [SUBT]
 Ej: "11351  2.00  7.60  LA PAULINA DANBO BARRA HORMA  21.04%  9,615.69  3.0%  70,896.89"
-→ texto_remito: "LA PAULINA DANBO BARRA HORMA", cantidad: 2, precio_unit: 9615.69, subtotal: 70896.89
-OJO: hay columna CANT y columna KG separadas. Usá CANT como cantidad SALVO que el producto se venda por kg (fiambres, quesos) y la columna KG tenga el peso facturado. "Alic" (21.04%) y "BON" (3.0%) son porcentajes, NO precios.
+→ texto_remito: "LA PAULINA DANBO BARRA HORMA", cantidad: 7.6, unidad: "kg", precio_unit: 9615.69, subtotal: 70896.89
+OJO: hay columna CANT y columna KG separadas. Si la columna KG trae un peso en ese renglón (fiambres, quesos), el PRECIO es por kg: la cantidad es ESE peso y la unidad es "kg" (en el ejemplo, 7,60 kg × 9.615,69 − 3% ≈ 70.896,89; con CANT 2 la cuenta no cierra). Si KG está vacía, la cantidad es CANT. Ante la duda, quedate con la que hace cerrar cantidad × precio − bonificación ≈ subtotal. "Alic" (21.04%) y "BON" (3.0%) son porcentajes, NO precios.
 
 FORMATO Quilmes (Cervecería y Maltería Quilmes, "NRO: 9256-..."):
 [BULTOS] [UNI] [COD] [DESCRIPCION] [PRECIO UNI] [PRECIO BRUTO] [DESCUENTO] [SUBTOTAL] [%II] [IMP.INTERNO] [INT.NO GRAV] [IMP.IVA] [TOTAL] [PREC.UNI.FINAL]

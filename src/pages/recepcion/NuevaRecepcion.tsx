@@ -157,6 +157,9 @@ function Recepcion({
   const cuentas = chequearCuentas(
     renglones.map((r) => ({ cantidad: r.cantidad, precio: r.precioUnit, subtotal: r.subtotal })),
     total !== null && total > 0 ? total : null,
+    origen === 'ia' && lectura
+      ? (lectura.totales.iva ?? 0) + (lectura.totales.percepciones ?? 0)
+      : 0,
   )
   // Como en La Bodeguita: si falta el total o no cierra, el pedido queda para revisar antes de pagar.
   const estadoPedido: 'a_pagar' | 'revisar' =

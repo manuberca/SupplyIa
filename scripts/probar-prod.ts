@@ -3,16 +3,19 @@
 // con usuarios @supplyia.test que crea y maneja este script. No borra nada y no toca otros bares.
 //
 //   npm run prod:probar                       (equipo, contraseñas, aislamiento)
-//   npm run prod:probar -- --foto remito.jpg  (además lee esa foto con la IA: gasta una lectura)
+//   npm run prod:probar -- --foto remito.jpg  (además lee esa foto, o las de esa carpeta, con la
+//                                              IA: gasta una lectura por foto)
 //
 // Verifica lo que solo se puede ver en producción: que el sitio publicado es el último, que las
 // funciones del servidor tienen sus claves (Supabase y Anthropic) y que las reglas de la base
 // de producción son las mismas que se probaron en desarrollo.
 
 import { execSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
 import { generarClave } from '../src/equipo/clave.ts'
 import type { RespuestaEquipo } from '../src/equipo/esquemas.ts'
 import type { Database } from '../src/lib/database.types.ts'
@@ -261,27 +264,38 @@ if (values.foto) {
     if (error) throw error
     proveedor = { id }
   }
-  const imagen = readFileSync(values.foto).toString('base64')
-  const inicioLectura = Date.now()
-  const lectura = await api<RespuestaLectura>('/api/ocr', tokenAdmin, {
-    proveedorId: proveedor.id,
-    imagen,
-    tipo: 'image/jpeg',
-  })
-  const segundos = ((Date.now() - inicioLectura) / 1000).toFixed(1)
-  if (lectura.cuerpo?.ok) {
-    const l = lectura.cuerpo.lectura
-    control(
-      'La IA lee la foto en producción',
-      l.lineas.length > 0,
-      `${segundos} s · remito ${l.nroRemito ?? '—'} · total ${l.totales.total ?? '—'} · ${l.lineas.length} renglones · lecturas del mes ${lectura.cuerpo.uso.usadas}/${lectura.cuerpo.uso.tope}`,
-    )
-  } else {
-    control(
-      'La IA lee la foto en producción',
-      false,
-      lectura.cuerpo?.error ?? `HTTP ${lectura.status}`,
-    )
+  // Una foto o una carpeta de fotos, comprimidas igual que lo hace la app en el celular.
+  const ruta = values.foto
+  const fotos = statSync(ruta).isDirectory()
+    ? readdirSync(ruta)
+        .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+        .sort()
+        .map((f) => join(ruta, f))
+    : [ruta]
+  for (const foto of fotos) {
+    const imagen = await sharp(foto)
+      .rotate()
+      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer()
+    const inicioLectura = Date.now()
+    const lectura = await api<RespuestaLectura>('/api/ocr', tokenAdmin, {
+      proveedorId: proveedor.id,
+      imagen: imagen.toString('base64'),
+      tipo: 'image/jpeg',
+    })
+    const segundos = ((Date.now() - inicioLectura) / 1000).toFixed(1)
+    const nombre = `La IA lee ${basename(foto)} en producción`
+    if (lectura.cuerpo?.ok) {
+      const l = lectura.cuerpo.lectura
+      control(
+        nombre,
+        l.lineas.length > 0,
+        `${segundos} s · boleta ${l.nroRemito ?? '—'} · total ${l.totales.total ?? '—'} · ${l.lineas.length} renglones · lecturas del mes ${lectura.cuerpo.uso.usadas}/${lectura.cuerpo.uso.tope}`,
+      )
+    } else {
+      control(nombre, false, lectura.cuerpo?.error ?? `HTTP ${lectura.status}`)
+    }
   }
 } else {
   console.log('· Lectura con IA: sin --foto, no se probó.')

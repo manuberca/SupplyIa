@@ -117,7 +117,13 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] **Sin mails para el piloto** (decisión de Manu, 1/10): al sumar a alguien, el servidor le genera una **contraseña provisoria** (`k7mq-p9xw-4hnd`), que se muestra una sola vez para pasársela (botón de WhatsApp). Administración puede generarle otra desde Editar → Nueva contraseña (no la propia, ni la de otro bar). Cada persona la cambia en Ajustes → Cambiar contraseña; mientras sea provisoria, la app se lo recuerda arriba. `cliente:alta` también le da una al primer administrador.
 - [x] Tests: `npm test` 186, `npm run test:db` 69, `npm run e2e` 20 (el de equipo entra como la persona invitada, cambia la contraseña y vuelve a entrar).
 - [x] Deploy `6924572` (1/10): contraseñas provisorias publicadas; `/api/equipo` en línea (401 sin sesión).
-- [ ] Manu: ponerse una contraseña en prod y probar el circuito completo con una persona de prueba.
+- [x] **Prueba de producción sin usar la cuenta de nadie**: `npm run prod:probar [-- --foto <foto o carpeta>]` arma y usa "Bar de Pruebas SupplyIA" (usuarios `pruebas-*@supplyia.test`) y controla sitio, versión, equipo, contraseñas, aislamiento, baja y lectura con IA. `/api/salud` dice si las claves de Netlify funcionan, sin mostrarlas.
+- [x] **Hallazgo (1/10):** en prod `SUPABASE_SERVICE_ROLE_KEY` quedó mal pegada en Netlify (con un salto de línea en el medio: el pedido ni sale). Por eso fallaban sumar gente y la lectura de fotos. Arreglo en código: las funciones limpian las claves antes de usarlas (`src/lib/secreto.ts`) y Sentry nunca recibe una clave. Conviene igual volver a pegarla bien en Netlify.
+- [x] **Fotos reales de boletas de La Bodeguita** (8, en `~/Downloads/boletas_test`), leídas con la IA de verdad en dev (Bar Demo): Cook Express, Juanchi, Speed y Climp exactas; La Esperanza exacta después de corregir la regla de la columna KG (quesos y fiambres por kilo: el ejemplo heredado estaba al revés); Papelera y Vinesco con los renglones bien pero sin el total en la foto (se carga a mano); Quilmes (de costado y muy densa) solo salió bien enderezada: 12 de 12 subtotales, 2 cantidades mal. Todas dentro del tiempo (4,9 a 19,5 s).
+- [x] El control del total acepta los impuestos que leyó la IA (impuestos internos y percepciones de bebidas), y un regalo en $0 no cuenta como "sin precio".
+- [ ] Deploy de lo anterior y `npm run prod:probar -- --foto ~/Downloads/boletas_test` para confirmar las claves en prod.
+- [ ] Mejora pendiente: enderezar sola la foto cuando viene de costado (la IA lee mucho mejor derecha).
+- [ ] Manu: ponerse una contraseña en prod (hoy entra solo con el link del mail).
 - [ ] SMTP con Resend + dominio propio: queda para cuando se venda (hoy "mandame un mail" solo le llega a Manu). No traba el piloto.
 - [ ] Alta de los dos bares del piloto con `cliente:alta --prod` (Manu todavía no definió cuáles).
 
