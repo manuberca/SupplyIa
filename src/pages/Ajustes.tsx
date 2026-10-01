@@ -4,6 +4,7 @@ import { LayoutDashboard, LogOut } from 'lucide-react'
 import { NOMBRE_ROL, puede } from '../lib/permisos'
 import { useSesion, useSesionLista } from '../sesion/contexto'
 import { ControlAjustes } from './ajustes/ControlAjustes'
+import { EquipoAjustes } from './ajustes/EquipoAjustes'
 import { UnidadesAjustes } from './ajustes/UnidadesAjustes'
 
 export function Ajustes() {
@@ -47,6 +48,8 @@ export function Ajustes() {
       )}
 
       {esAdmin && <ControlAjustes />}
+
+      {esAdmin && <EquipoAjustes />}
 
       {esAdmin && <UnidadesAjustes />}
 

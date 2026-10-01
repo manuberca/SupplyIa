@@ -140,7 +140,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await db.from('productos').update({ activo: false }).eq('id', tomate)
   await db.from('proveedores').update({ activo: false }).eq('id', proveedor)
-  await db.auth.signOut()
+  await db.auth.signOut({ scope: 'local' })
 })
 
 test('resumen, Excel con los mismos números, diferencia reclamada y pagos', async ({ page }) => {

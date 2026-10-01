@@ -86,7 +86,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await db.from('productos').update({ activo: false }).in('id', [ids.tomate, ids.lechuga])
   await db.from('proveedores').update({ activo: false }).eq('id', ids.proveedor)
-  await db.auth.signOut()
+  await db.auth.signOut({ scope: 'local' })
 })
 
 test('un pedido hecho sin señal se sube solo al volver la señal', async ({ page, context }) => {

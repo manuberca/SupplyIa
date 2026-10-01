@@ -123,7 +123,7 @@ test.afterAll(async () => {
     .update({ activo: false })
     .in('id', [ids.vacio, ids.matambre, ids.entrana])
   await db.from('proveedores').update({ activo: false }).eq('id', ids.proveedor)
-  await db.auth.signOut()
+  await db.auth.signOut({ scope: 'local' })
 })
 
 test('con la IA: lee el remito, marca el aumento y el faltante, y el pedido queda para revisar', async ({

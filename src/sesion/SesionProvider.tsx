@@ -37,6 +37,14 @@ function guardarCopia(sesion: Sesion) {
   }
 }
 
+function borrarCopia(userId: string) {
+  try {
+    localStorage.removeItem(claveCopia(userId))
+  } catch {
+    // Sin almacenamiento no hay copia que borrar.
+  }
+}
+
 function leerCopia(userId: string): Sesion | null {
   try {
     const texto = localStorage.getItem(claveCopia(userId))
@@ -73,7 +81,9 @@ async function cargarSesion(usuario: Usuario): Promise<Sesion> {
   }
 
   const miembro = miembroRes.data
+  // Sin bar, o dado de baja (ahí la base ya no le muestra la organización).
   if (!miembro || !miembro.organizaciones) {
+    borrarCopia(usuario.id)
     return { estado: 'sin_membresia', email: usuario.email }
   }
 
@@ -153,7 +163,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }, [usuarioId, orgId, rol])
 
   const salir = useCallback(async () => {
-    const { error } = await supabase.auth.signOut()
+    // Solo en este dispositivo: la misma persona puede seguir trabajando en otro.
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
     if (error) {
       // Aunque falle avisarle al servidor, la sesión local se borra igual.
       reportar(error, 'Error al cerrar sesión')
@@ -172,9 +183,16 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   const reintentar = useCallback(() => setIntento((n) => n + 1), [])
 
+  const refrescar = useCallback(async () => {
+    if (!usuario || !claveActual) return
+    const s = await cargarSesion(usuario).catch(() => null)
+    // Si falla, queda lo que había: es solo para ver los cambios sin recargar la app.
+    if (s?.estado === 'lista') setCarga({ clave: claveActual, sesion: s })
+  }, [usuario, claveActual])
+
   const valor = useMemo<ValorSesion>(
-    () => ({ sesion, salir, elegirLocal, reintentar }),
-    [sesion, salir, elegirLocal, reintentar],
+    () => ({ sesion, salir, elegirLocal, reintentar, refrescar }),
+    [sesion, salir, elegirLocal, reintentar, refrescar],
   )
 
   return <ContextoSesion.Provider value={valor}>{children}</ContextoSesion.Provider>

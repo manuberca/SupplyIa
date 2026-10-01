@@ -69,7 +69,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await db.from('productos').update({ activo: false, umbral_alerta_pct: null }).eq('id', producto)
   await db.from('proveedores').update({ activo: false }).eq('id', proveedor)
-  await db.auth.signOut()
+  await db.auth.signOut({ scope: 'local' })
 })
 
 test('el aumento se ve en Inicio y en Precios, y una excepción de umbral lo apaga', async ({

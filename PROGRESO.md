@@ -105,11 +105,21 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] Un solo control del total (el de La Bodeguita); el de la IA revisa solo los renglones. La suma usa todos los renglones de la boleta, tengan o no producto asignado. Si la diferencia es chica y no es IVA, lo dice como es.
 - [x] Prueba de la IA de verdad desde la app en local (30/9, Bar Demo): Quilmes 7,1 s y La Esperanza (Factura A, borrosa) 6,0 s, número, total y todos los renglones exactos.
 - [x] Tests: `npm test` 184, `npm run e2e` 18.
-- [ ] Usuarios y locales desde Ajustes, alta de clientes, SMTP (Resend). Plan pendiente de OK.
+- [x] Plan aprobado (1/10): usuarios y locales desde Ajustes, alta de clientes, SMTP con Resend.
+- [x] Migración `equipo` en **dev**: `miembros.activo` (dar de baja sin borrar: las tres funciones de permisos lo dejan afuera de todo) y `miembros.email` (administración ve el mail de su equipo); ya no se borran miembros; nadie se da de baja a sí mismo; siempre queda un local activo; `usuario_por_email` solo para el servidor.
+- [x] Función `/api/equipo` (`netlify/functions/equipo`): solo administración activa suma gente; valida todo antes de crear el usuario; un mail no puede estar en dos bares; si la persona estaba dada de baja, la reactiva. La persona entra con su mail (sin contraseña).
+- [x] Ajustes → **Locales** (agregar, cambiar nombre, archivar, reactivar) y **Equipo** (sumar con rol y locales, editar, dar de baja, reactivar, aviso por WhatsApp). El selector de local se actualiza solo.
+- [x] `npm run cliente:alta -- --nombre … --locales … --admin … --admin-nombre … [--prod] [--confirmar]`: organización + locales + primera administración. Sin `--confirmar` solo muestra lo que haría. Probado en dev con "Bar de Ensayo".
+- [x] Cerrar sesión cierra solo ese dispositivo (antes cortaba la sesión de la misma persona en todos).
+- [x] Tests: `npm test` 184, `npm run test:db` 65 (12 de equipo y locales, con la invitación real), `npm run e2e` 20.
+- [ ] Migración `equipo` en prod (pedir confirmación) y deploy.
+- [ ] SMTP con Resend (lo crea Manu con su mail personal): sin eso los mails de entrada no llegan a gente de afuera.
+- [ ] Alta de los dos bares del piloto con `cliente:alta --prod`.
 
 ## Datos en dev
 
-- Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano.
+- Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano. Los tests dejan locales archivados y dos miembros dados de baja (`invitado-a`, `invitado-e2e`): es esperable.
+- Bar de Ensayo (Centro, Norte; admin `ensayo@supplyia.test`): creado con `cliente:alta` para probar el script.
 - Bar Demo (1 local, Centro): organización de Manu (admin) para probar a mano, con el catálogo y el historial de La Bodeguita. Usuarios de prueba `admin-demo` y `encargado-demo` (@supplyia.test).
 
 ## Datos en prod

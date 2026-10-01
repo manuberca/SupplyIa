@@ -62,16 +62,17 @@ describe('aislamiento entre organizaciones', () => {
   })
 
   it('cada uno ve solo sus locales, ajustes y equipo', async () => {
-    const locales = await c.adminA.from('locales').select('org_id')
+    // Administración ve todo lo de su bar (también lo archivado o dado de baja) y nada de otro.
+    const locales = await c.adminA.from('locales').select('org_id, activo')
     const ajustes = await c.adminA.from('ajustes').select('org_id')
-    const miembros = await c.adminA.from('miembros').select('org_id')
-    expect(locales.data?.length).toBe(2)
+    const miembros = await c.adminA.from('miembros').select('org_id, activo')
+    expect(locales.data?.filter((x) => x.activo).length).toBe(2)
     expect(locales.data?.every((x) => x.org_id === ORGS.a.id)).toBe(true)
     expect(ajustes.data).toEqual([{ org_id: ORGS.a.id }])
-    expect(miembros.data?.length).toBe(3)
+    expect(miembros.data?.filter((x) => x.activo).length).toBe(3)
     expect(miembros.data?.every((x) => x.org_id === ORGS.a.id)).toBe(true)
 
-    const localesB = await c.adminB.from('locales').select('id')
+    const localesB = await c.adminB.from('locales').select('id').eq('activo', true)
     expect(localesB.data).toEqual([{ id: LOCALES.bUnico.id }])
   })
 

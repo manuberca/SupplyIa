@@ -96,10 +96,10 @@ export default async function handler(req: Request): Promise<Response> {
       throw new ErrorParaMostrar('Tu sesión venció. Entrá de nuevo.', 401)
     const { data: miembro } = await db
       .from('miembros')
-      .select('org_id')
+      .select('org_id, activo')
       .eq('user_id', usuario.user.id)
       .maybeSingle()
-    if (!miembro) throw new ErrorParaMostrar('Tu usuario no está en ningún bar.', 403)
+    if (!miembro?.activo) throw new ErrorParaMostrar('Tu usuario no está en ningún bar.', 403)
 
     // ─── Qué manda ──────────────────────────────────────────────────────
     const cuerpo = pedidoLecturaSchema.safeParse(await req.json().catch(() => null))

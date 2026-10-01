@@ -24,7 +24,8 @@
     "e2e": "playwright test",
     "remitos:probar": "tsx scripts/probar-remitos.ts",
     "labode:importar": "tsx scripts/importar-labode.ts",
-    "remitos:armar": "tsx scripts/remitos-sinteticos.ts"
+    "remitos:armar": "tsx scripts/remitos-sinteticos.ts",
+    "cliente:alta": "tsx scripts/alta-cliente.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",

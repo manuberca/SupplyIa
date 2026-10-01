@@ -223,6 +223,8 @@ export type Database = {
       }
       miembros: {
         Row: {
+          activo: boolean
+          email: string | null
           locales: string[] | null
           nombre: string
           org_id: string
@@ -230,6 +232,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activo?: boolean
+          email?: string | null
           locales?: string[] | null
           nombre: string
           org_id: string
@@ -237,6 +241,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activo?: boolean
+          email?: string | null
           locales?: string[] | null
           nombre?: string
           org_id?: string
@@ -859,6 +865,7 @@ export type Database = {
         Args: { p_mes: string; p_org: string }
         Returns: Json
       }
+      usuario_por_email: { Args: { p_email: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
