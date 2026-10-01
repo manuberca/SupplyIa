@@ -112,7 +112,8 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] `npm run cliente:alta -- --nombre … --locales … --admin … --admin-nombre … [--prod] [--confirmar]`: organización + locales + primera administración. Sin `--confirmar` solo muestra lo que haría. Probado en dev con "Bar de Ensayo".
 - [x] Cerrar sesión cierra solo ese dispositivo (antes cortaba la sesión de la misma persona en todos).
 - [x] Tests: `npm test` 184, `npm run test:db` 65 (12 de equipo y locales, con la invitación real), `npm run e2e` 20.
-- [ ] Migración `equipo` en prod (pedir confirmación) y deploy.
+- [x] Migración `equipo` en prod (1/10, confirmado y verificado).
+- [ ] Deploy (push) y probar Ajustes → Equipo en prod.
 - [ ] SMTP con Resend (lo crea Manu con su mail personal): sin eso los mails de entrada no llegan a gente de afuera.
 - [ ] Alta de los dos bares del piloto con `cliente:alta --prod`.
 
