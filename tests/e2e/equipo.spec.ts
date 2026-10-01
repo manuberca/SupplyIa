@@ -1,7 +1,7 @@
 // Etapa 7 — Ajustes: locales (agregar, renombrar, archivar) y equipo (sumar, cambiar el rol,
 // dar de baja). Usa siempre el mismo mail de prueba: si quedó de otra corrida, arranca dado de baja.
 
-import { expect, test } from '@playwright/test'
+import { devices, expect, test } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
 import { USUARIOS } from '../db/datos'
@@ -33,7 +33,7 @@ test.afterAll(async () => {
   await db.auth.signOut({ scope: 'local' })
 })
 
-test('administración maneja sus locales y su equipo desde Ajustes', async ({ page }) => {
+test('administración maneja sus locales y su equipo desde Ajustes', async ({ page, browser }) => {
   await page.goto('/')
   await page.getByLabel('Mail').fill(admin.email)
   await page.getByLabel('Contraseña').fill(clave)
@@ -74,14 +74,58 @@ test('administración maneja sus locales y su equipo desde Ajustes', async ({ pa
   if (capturas) await page.screenshot({ path: `${capturas}/e1-sumar.png`, fullPage: true })
   await equipo.getByRole('button', { name: 'Sumar al equipo' }).click()
   await expect(equipo.getByText(`Inés ${corrida} ya está en el equipo.`)).toBeVisible()
-  await expect(equipo.getByRole('link', { name: 'Avisarle por WhatsApp' })).toHaveAttribute(
+  // La contraseña provisoria se muestra una sola vez, lista para mandarla.
+  const provisoria = await equipo.locator('.clave-provisoria').innerText()
+  expect(provisoria).toMatch(/^[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$/)
+  await expect(equipo.getByRole('link', { name: 'Mandársela por WhatsApp' })).toHaveAttribute(
     'href',
-    /wa\.me\/\?text=.*invitado-e2e/,
+    new RegExp(`wa\\.me/\\?text=.*invitado-e2e.*${provisoria}`),
   )
+  if (capturas) await page.screenshot({ path: `${capturas}/e2-clave.png`, fullPage: true })
   await equipo.getByRole('button', { name: 'Listo' }).click()
+  await expect(equipo.locator('.clave-provisoria')).toHaveCount(0)
   const fila = equipo.locator('.lista__fila', { hasText: `Inés ${corrida}` })
   await expect(fila.getByText('Recepción · Pichincha')).toBeVisible()
-  if (capturas) await page.screenshot({ path: `${capturas}/e2-equipo.png`, fullPage: true })
+
+  // ─── La persona entra en su celular con esa contraseña y la cambia ───
+  const suCelular = await browser.newContext({ ...devices['Pixel 7'], locale: 'es-AR' })
+  const suya = await suCelular.newPage()
+  await suya.goto('/')
+  await suya.getByLabel('Mail').fill(INVITADO)
+  await suya.getByLabel('Contraseña').fill(provisoria)
+  await suya.getByRole('button', { name: 'Entrar', exact: true }).click()
+  // Recepción en Pichincha: entra, y la app le recuerda cambiar la contraseña.
+  await suya.getByRole('link', { name: /contraseña provisoria/ }).click()
+  await expect(suya.getByRole('heading', { name: 'Tu cuenta' })).toBeVisible()
+  await suya.getByRole('button', { name: 'Cambiar contraseña' }).click()
+  await suya.getByLabel('Contraseña nueva').fill('corta')
+  await suya.getByLabel('Repetila').fill('corta')
+  await suya.getByRole('button', { name: 'Guardar contraseña' }).click()
+  await expect(suya.getByText('al menos 8 caracteres.').last()).toBeVisible()
+  const propia = `mia-${corrida}-${provisoria.slice(0, 4)}`
+  await suya.getByLabel('Contraseña nueva').fill(propia)
+  await suya.getByLabel('Repetila').fill(propia)
+  await suya.getByRole('button', { name: 'Guardar contraseña' }).click()
+  await expect(suya.getByText('Listo: ya tenés tu contraseña nueva.')).toBeVisible()
+  // Ya no es provisoria: el recordatorio desaparece, y entra con la suya.
+  await suya.getByRole('link', { name: 'Inicio', exact: true }).click()
+  await expect(suya.getByRole('link', { name: /contraseña provisoria/ })).toHaveCount(0)
+  await suya.getByRole('link', { name: /abrir ajustes/ }).click()
+  await suya.getByRole('button', { name: 'Cerrar sesión' }).click()
+  await suya.getByLabel('Mail').fill(INVITADO)
+  await suya.getByLabel('Contraseña').fill(propia)
+  await suya.getByRole('button', { name: 'Entrar', exact: true }).click()
+  // Vuelve a la pantalla donde estaba (Ajustes), ya con su contraseña.
+  await expect(suya.getByRole('heading', { name: 'Tu cuenta' })).toBeVisible()
+  await expect(suya.getByText('contraseña provisoria')).toHaveCount(0)
+  await suCelular.close()
+
+  // Si la pierde, administración le genera otra.
+  await equipo.getByRole('button', { name: `Editar a Inés ${corrida}` }).click()
+  await equipo.getByRole('button', { name: 'Nueva contraseña' }).click()
+  await expect(equipo.getByText(`Inés ${corrida} tiene una contraseña nueva.`)).toBeVisible()
+  expect(await equipo.locator('.clave-provisoria').innerText()).not.toBe(provisoria)
+  await equipo.getByRole('button', { name: 'Listo' }).click()
 
   // Cambiarle el rol: como encargada ve todos los locales.
   await equipo.getByRole('button', { name: `Editar a Inés ${corrida}` }).click()

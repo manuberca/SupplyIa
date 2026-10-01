@@ -1,12 +1,14 @@
-import { Link, Outlet } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import { Settings } from 'lucide-react'
 import { BarraInferior } from './BarraInferior'
 import { Marca } from './Marca'
-import { useSesionLista } from '../sesion/contexto'
+import { useSesion, useSesionLista } from '../sesion/contexto'
 import { EstadoConexion } from '../offline/EstadoConexion'
 
 export function Estructura() {
   const { local, org } = useSesionLista()
+  const { claveProvisoria } = useSesion()
+  const enAjustes = useLocation().pathname === '/ajustes'
   const nombre = local?.nombre ?? org.nombre
 
   return (
@@ -20,6 +22,11 @@ export function Estructura() {
           </Link>
         </header>
         <EstadoConexion />
+        {claveProvisoria && !enAjustes && (
+          <Link to="/ajustes" className="aviso aviso--atencion aviso--enlace">
+            Estás con una contraseña provisoria. Tocá acá para cambiarla.
+          </Link>
+        )}
         <Outlet />
       </main>
       <BarraInferior />

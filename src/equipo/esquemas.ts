@@ -20,9 +20,20 @@ export const invitacionSchema = z.object({
 })
 export type Invitacion = z.infer<typeof invitacionSchema>
 
+/** Lo que se le pide a /api/equipo: sumar a alguien, o darle una contraseña nueva a quien la perdió. */
+export const pedidoEquipoSchema = z.discriminatedUnion('accion', [
+  invitacionSchema.extend({ accion: z.literal('invitar') }),
+  z.object({ accion: z.literal('nueva_clave'), userId: z.uuid() }),
+])
+
 export const respuestaEquipoSchema = z.discriminatedUnion('ok', [
-  // reactivado: la persona ya había estado en el equipo y se la volvió a sumar.
-  z.object({ ok: z.literal(true), reactivado: z.boolean() }),
+  z.object({
+    ok: z.literal(true),
+    /** Contraseña provisoria: se muestra una sola vez; la persona la cambia al entrar. */
+    clave: z.string(),
+    /** La persona ya había estado en el equipo y se la volvió a sumar. */
+    reactivado: z.boolean(),
+  }),
   z.object({ ok: z.literal(false), error: z.string() }),
 ])
 export type RespuestaEquipo = z.infer<typeof respuestaEquipoSchema>

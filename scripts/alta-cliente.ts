@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { generarClave } from '../src/equipo/clave.ts'
 import type { Database } from '../src/lib/database.types.ts'
 
 const REF = { dev: 'efyulrowgyrxqubjelor', prod: 'xrdujgrbmjgtcwxrkqer' } as const
@@ -124,9 +125,16 @@ if (errorLocales)
   salir(`La organización quedó creada, pero fallaron los locales: ${errorLocales.message}`)
 console.log(`✓ ${locales.length} ${locales.length === 1 ? 'local' : 'locales'}`)
 
+// Usuario nuevo: nace con una contraseña provisoria, que se muestra una sola vez acá abajo.
 let idAdmin = userId
+const clave = idAdmin ? null : generarClave()
 if (!idAdmin) {
-  const creado = await db.auth.admin.createUser({ email: admin, email_confirm: true })
+  const creado = await db.auth.admin.createUser({
+    email: admin,
+    email_confirm: true,
+    password: clave!,
+    user_metadata: { clave_provisoria: true },
+  })
   if (creado.error || !creado.data.user)
     salir(`Quedaron la organización y los locales, pero falló el usuario: ${creado.error?.message}`)
   idAdmin = creado.data.user.id
@@ -145,8 +153,12 @@ if (errorMiembro)
   )
 console.log(`✓ ${adminNombre} administra ${nombre}`)
 
+console.log(`\nListo. ${adminNombre} entra en la app con:`)
+console.log(`  Mail:        ${admin}`)
 console.log(
-  `\nListo. ${adminNombre} entra con su mail (${admin}) y "mandame un mail para entrar": no necesita contraseña.`,
+  clave
+    ? `  Contraseña:  ${clave}   (provisoria: la cambia en Ajustes; no se vuelve a mostrar)`
+    : '  Contraseña:  la que ya tenía (su usuario existía)',
 )
 console.log(
   'Después carga sus proveedores (o importa la planilla) y suma a su equipo desde Ajustes.',

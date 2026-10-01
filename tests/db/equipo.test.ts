@@ -45,7 +45,18 @@ async function invitar(
   return { status: respuesta.status, cuerpo: (await respuesta.json()) as RespuestaEquipo }
 }
 
+const FORMATO_CLAVE = /^[a-hjkmnp-z2-9]{4}-[a-hjkmnp-z2-9]{4}-[a-hjkmnp-z2-9]{4}$/
+/** La contraseña provisoria que devolvió la última invitación. */
+let claveInvitado = ''
+
+const entrar = async (password: string) => {
+  const cliente = nuevoCliente()
+  const { error } = await cliente.auth.signInWithPassword({ email: INVITADO, password })
+  return { cliente, error }
+}
+
 const invitacion = {
+  accion: 'invitar',
   email: INVITADO,
   nombre: 'Iván (invitado)',
   rol: 'recepcion',
@@ -106,7 +117,10 @@ describe('sumar gente al equipo (función /api/equipo)', () => {
   it('administración suma a una persona con su rol y sus locales; dos veces no', async () => {
     const r = await invitar(c.adminA, invitacion)
     expect(r.status).toBe(200)
-    expect(r.cuerpo.ok).toBe(true)
+    if (!r.cuerpo.ok) throw new Error(r.cuerpo.error)
+    // Devuelve la contraseña provisoria, una sola vez.
+    expect(r.cuerpo.clave).toMatch(FORMATO_CLAVE)
+    claveInvitado = r.cuerpo.clave
     const { data } = await c.adminA
       .from('miembros')
       .select('org_id, rol, locales, nombre, activo, email')
@@ -139,12 +153,15 @@ describe('dar de baja', () => {
   let invitado: Cliente
 
   beforeAll(async () => {
-    // El invitado entra con código por mail; para la prueba se le pone la contraseña de prueba.
-    const { data: id } = await servicio.rpc('usuario_por_email', { p_email: INVITADO })
-    await servicio.auth.admin.updateUserById(id!, { password: clave })
-    invitado = nuevoCliente()
-    const { error } = await invitado.auth.signInWithPassword({ email: INVITADO, password: clave })
+    // Entra con su mail y la contraseña provisoria que le pasó administración.
+    const { cliente, error } = await entrar(claveInvitado)
     if (error) throw error
+    invitado = cliente
+  })
+
+  it('la contraseña con la que entra está marcada como provisoria', async () => {
+    const { data } = await invitado.auth.getUser()
+    expect(data.user?.user_metadata.clave_provisoria).toBe(true)
   })
 
   it('activo, ve su bar y solo su local', async () => {
@@ -186,7 +203,12 @@ describe('dar de baja', () => {
 
   it('volver a sumarlo lo reactiva con el rol nuevo', async () => {
     const r = await invitar(c.adminA, { ...invitacion, rol: 'encargado', locales: null })
-    expect(r.cuerpo).toEqual({ ok: true, reactivado: true })
+    expect(r.cuerpo).toMatchObject({ ok: true, reactivado: true })
+    if (!r.cuerpo.ok) throw new Error(r.cuerpo.error)
+    // Vuelve con una contraseña nueva: la de antes ya no sirve.
+    expect((await entrar(claveInvitado)).error).not.toBeNull()
+    claveInvitado = r.cuerpo.clave
+    expect((await entrar(claveInvitado)).error).toBeNull()
     const { data } = await c.adminA
       .from('miembros')
       .select('rol, locales, activo')
@@ -211,6 +233,54 @@ describe('dar de baja', () => {
     const { data, error } = await c.adminA.rpc('usuario_por_email', { p_email: INVITADO })
     expect(data).toBeNull()
     expect(error).not.toBeNull()
+  })
+})
+
+describe('contraseña nueva para alguien del equipo', () => {
+  let userId: string
+
+  beforeAll(async () => {
+    userId = (await servicio.rpc('usuario_por_email', { p_email: INVITADO })).data!
+  })
+
+  it('solo administración, solo de su bar, y no la propia', async () => {
+    const pedido = { accion: 'nueva_clave', userId }
+    expect((await invitar(c.encargadoA, pedido)).status).toBe(403)
+    const deOtroBar = await invitar(c.adminB, pedido)
+    expect(deOtroBar.status).toBe(404)
+    expect(deOtroBar.cuerpo).toEqual({ ok: false, error: 'Esa persona no está en tu equipo.' })
+    // Nada de eso le cambió la contraseña.
+    expect((await entrar(claveInvitado)).error).toBeNull()
+
+    const { data: yo } = await c.adminA.auth.getUser()
+    const propia = await invitar(c.adminA, { accion: 'nueva_clave', userId: yo.user!.id })
+    expect(propia.cuerpo).toEqual({
+      ok: false,
+      error: 'Tu contraseña la cambiás vos, en "Cambiar contraseña".',
+    })
+  })
+
+  it('administración genera otra: la anterior deja de servir', async () => {
+    const r = await invitar(c.adminA, { accion: 'nueva_clave', userId })
+    if (!r.cuerpo.ok) throw new Error(r.cuerpo.error)
+    expect(r.cuerpo.clave).toMatch(FORMATO_CLAVE)
+    expect(r.cuerpo.clave).not.toBe(claveInvitado)
+    expect((await entrar(claveInvitado)).error).not.toBeNull()
+    claveInvitado = r.cuerpo.clave
+  })
+
+  it('la persona la cambia por una suya y deja de ser provisoria', async () => {
+    const { cliente, error } = await entrar(claveInvitado)
+    expect(error).toBeNull()
+    const propia = `propia-${randomUUID()}`
+    const cambio = await cliente.auth.updateUser({
+      password: propia,
+      data: { clave_provisoria: false },
+    })
+    expect(cambio.error).toBeNull()
+    expect(cambio.data.user?.user_metadata.clave_provisoria).toBe(false)
+    expect((await entrar(claveInvitado)).error).not.toBeNull()
+    expect((await entrar(propia)).error).toBeNull()
   })
 })
 

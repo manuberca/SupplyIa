@@ -60,8 +60,11 @@ export async function cargarEquipo(): Promise<Miembro[] | { error: string }> {
   })
 }
 
-/** Suma a una persona al bar (o la vuelve a sumar si había sido dada de baja). */
-export async function invitar(invitacion: Invitacion): Promise<RespuestaEquipo> {
+async function pedirAlServidor(
+  pedido: ({ accion: 'invitar' } & Invitacion) | { accion: 'nueva_clave'; userId: string },
+  contexto: string,
+  falla: string,
+): Promise<RespuestaEquipo> {
   if (!navigator.onLine) return { ok: false, error: SIN_CONEXION }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
@@ -70,18 +73,55 @@ export async function invitar(invitacion: Invitacion): Promise<RespuestaEquipo> 
     const respuesta = await fetch('/api/equipo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(invitacion),
+      body: JSON.stringify(pedido),
     })
     const cuerpo: unknown = await respuesta.json().catch(() => null)
     const r = respuestaEquipoSchema.safeParse(cuerpo)
     if (r.success) return r.data
-    reportar(new Error(`Respuesta inesperada de /api/equipo (${respuesta.status})`), 'Invitar')
-    return { ok: false, error: 'No pudimos sumar a la persona. Probá de nuevo en un rato.' }
+    reportar(new Error(`Respuesta inesperada de /api/equipo (${respuesta.status})`), contexto)
+    return { ok: false, error: falla }
   } catch (error) {
     if (!navigator.onLine) return { ok: false, error: SIN_CONEXION }
-    reportar(error, 'Invitar')
-    return { ok: false, error: 'No pudimos sumar a la persona. Probá de nuevo en un rato.' }
+    reportar(error, contexto)
+    return { ok: false, error: falla }
   }
+}
+
+/** Suma a una persona al bar (o la vuelve a sumar si había sido dada de baja). */
+export function invitar(invitacion: Invitacion) {
+  return pedirAlServidor(
+    { accion: 'invitar', ...invitacion },
+    'Invitar',
+    'No pudimos sumar a la persona. Probá de nuevo en un rato.',
+  )
+}
+
+/** Le genera una contraseña provisoria nueva a alguien del equipo que perdió la suya. */
+export function nuevaClave(userId: string) {
+  return pedirAlServidor(
+    { accion: 'nueva_clave', userId },
+    'Nueva contraseña',
+    'No pudimos generar la contraseña. Probá de nuevo en un rato.',
+  )
+}
+
+/** Cambia la contraseña propia (y deja de ser provisoria). */
+export async function cambiarMiClave(clave: string): Promise<Resultado> {
+  if (!navigator.onLine) return { ok: false, mensaje: SIN_CONEXION }
+  const { error } = await supabase.auth.updateUser({
+    password: clave,
+    data: { clave_provisoria: false },
+  })
+  if (!error) return { ok: true }
+  if (error.code === 'same_password')
+    return { ok: false, mensaje: 'Esa es la contraseña que ya tenías. Elegí otra.' }
+  if (error.code === 'weak_password')
+    return {
+      ok: false,
+      mensaje: 'Esa contraseña es muy fácil de adivinar. Probá con otra más larga.',
+    }
+  reportar(error, 'Cambiar contraseña')
+  return { ok: false, mensaje: 'No pudimos cambiar la contraseña. Probá de nuevo.' }
 }
 
 export function editarMiembro(

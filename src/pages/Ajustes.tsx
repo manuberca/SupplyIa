@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { LayoutDashboard, LogOut } from 'lucide-react'
 import { NOMBRE_ROL, puede } from '../lib/permisos'
 import { useSesion, useSesionLista } from '../sesion/contexto'
+import { CambiarClave } from './ajustes/CambiarClave'
 import { ControlAjustes } from './ajustes/ControlAjustes'
 import { EquipoAjustes } from './ajustes/EquipoAjustes'
 import { UnidadesAjustes } from './ajustes/UnidadesAjustes'
@@ -72,6 +73,7 @@ export function Ajustes() {
             <dd>{__VERSION__}</dd>
           </div>
         </dl>
+        <CambiarClave />
         <button className="boton boton--secundario" onClick={cerrarSesion} disabled={saliendo}>
           <LogOut size={18} aria-hidden="true" />
           {saliendo ? 'Saliendo…' : 'Cerrar sesión'}

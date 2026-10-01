@@ -1835,3 +1835,16 @@ a.boton {
 .fila-miembro__vos {
   margin-left: 8px;
 }
+
+.aviso--enlace {
+  display: block;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.clave-provisoria {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: all;
+}

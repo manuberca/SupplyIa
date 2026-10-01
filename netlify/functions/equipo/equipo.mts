@@ -1,13 +1,15 @@
 // Altas de miembros (SPEC §2): solo administración suma gente a su bar, y solo desde acá, con la
 // clave de servicio. Desde la app nadie puede insertar miembros (así nadie se suma solo a un bar
-// ni suma a un usuario cualquiera). La persona invitada entra después con su mail.
+// ni suma a un usuario cualquiera). La persona entra con su mail y una contraseña provisoria que
+// se devuelve una sola vez (no se mandan mails); administración puede generarle otra si la pierde.
 
 import * as Sentry from '@sentry/node'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../../src/lib/database.types'
+import { generarClave } from '../../../src/equipo/clave'
 import {
-  invitacionSchema,
   MAXIMO_MIEMBROS,
+  pedidoEquipoSchema,
   type RespuestaEquipo,
 } from '../../../src/equipo/esquemas'
 import { ErrorParaMostrar, json, origenPermitido } from '../../lib/http'
@@ -59,14 +61,37 @@ export default async function handler(req: Request): Promise<Response> {
     if (!yo || !yo.activo || yo.rol !== 'admin')
       throw new ErrorParaMostrar('Solo administración puede sumar gente al equipo.', 403)
 
-    const cuerpo = invitacionSchema.safeParse(await req.json().catch(() => null))
+    const cuerpo = pedidoEquipoSchema.safeParse(await req.json().catch(() => null))
     if (!cuerpo.success)
       throw new ErrorParaMostrar(cuerpo.error.issues[0]?.message ?? 'Revisá los datos.')
-    const { email, nombre, rol, locales } = cuerpo.data
+    const pedido = cuerpo.data
 
     const servicio = createClient<Database>(url, claveServicio, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
+    // La contraseña provisoria se le pone al usuario y se devuelve una sola vez. Queda marcada
+    // como provisoria para que la app le recuerde cambiarla.
+    const clave = generarClave()
+    const conClave = { password: clave, user_metadata: { clave_provisoria: true } }
+
+    // ─── Contraseña nueva para alguien del equipo que la perdió ─────────
+    if (pedido.accion === 'nueva_clave') {
+      if (pedido.userId === usuario.user.id)
+        throw new ErrorParaMostrar('Tu contraseña la cambiás vos, en "Cambiar contraseña".')
+      const { data: destino, error: errorDestino } = await servicio
+        .from('miembros')
+        .select('org_id, activo')
+        .eq('user_id', pedido.userId)
+        .maybeSingle()
+      if (errorDestino) throw errorDestino
+      if (!destino || destino.org_id !== yo.org_id || !destino.activo)
+        throw new ErrorParaMostrar('Esa persona no está en tu equipo.', 404)
+      const { error } = await servicio.auth.admin.updateUserById(pedido.userId, conClave)
+      if (error) throw error
+      return responder({ ok: true, clave, reactivado: false }, 200, origen)
+    }
+
+    const { email, nombre, rol, locales } = pedido
 
     // ─── Los locales elegidos tienen que ser de este bar y estar activos ───
     // (se controla antes de crear nada, para no dejar usuarios sueltos si el pedido está mal)
@@ -82,22 +107,13 @@ export default async function handler(req: Request): Promise<Response> {
         throw new ErrorParaMostrar('Alguno de los locales elegidos no es de tu bar.')
     }
 
-    // ─── ¿Ya tiene usuario? Si no, se crea (sin contraseña: entra con el código del mail) ───
+    // ─── ¿Ya está en algún bar? (antes de tocar su usuario) ─────────────
     const buscado = await servicio.rpc('usuario_por_email', { p_email: email })
     if (buscado.error) throw buscado.error
     let userId: string | null = buscado.data
-    if (!userId) {
-      const creado = await servicio.auth.admin.createUser({ email, email_confirm: true })
-      if (creado.error || !creado.data.user) throw creado.error ?? new Error('Sin usuario')
-      userId = creado.data.user.id
-    }
-
-    // ─── ¿Ya está en algún bar? ─────────────────────────────────────────
-    const { data: actual, error: errorActual } = await servicio
-      .from('miembros')
-      .select('org_id, activo')
-      .eq('user_id', userId)
-      .maybeSingle()
+    const { data: actual, error: errorActual } = userId
+      ? await servicio.from('miembros').select('org_id, activo').eq('user_id', userId).maybeSingle()
+      : { data: null, error: null }
     if (errorActual) throw errorActual
     if (actual && actual.org_id !== yo.org_id)
       throw new ErrorParaMostrar(
@@ -106,6 +122,29 @@ export default async function handler(req: Request): Promise<Response> {
       )
     if (actual?.activo) throw new ErrorParaMostrar('Esa persona ya está en tu equipo.', 409)
 
+    if (!actual) {
+      const { count } = await servicio
+        .from('miembros')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('org_id', yo.org_id)
+      if ((count ?? 0) >= MAXIMO_MIEMBROS)
+        throw new ErrorParaMostrar(`El equipo llegó al máximo de ${MAXIMO_MIEMBROS} personas.`)
+    }
+
+    // ─── El usuario, con su contraseña provisoria ───────────────────────
+    if (userId) {
+      const { error } = await servicio.auth.admin.updateUserById(userId, conClave)
+      if (error) throw error
+    } else {
+      const creado = await servicio.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        ...conClave,
+      })
+      if (creado.error || !creado.data.user) throw creado.error ?? new Error('Sin usuario')
+      userId = creado.data.user.id
+    }
+
     if (actual) {
       // Había sido dada de baja: vuelve con el rol y los locales que se eligieron ahora.
       const { error } = await servicio
@@ -113,21 +152,14 @@ export default async function handler(req: Request): Promise<Response> {
         .update({ activo: true, rol, locales, nombre, email })
         .eq('user_id', userId)
       if (error) throw error
-      return responder({ ok: true, reactivado: true }, 200, origen)
+      return responder({ ok: true, clave, reactivado: true }, 200, origen)
     }
-
-    const { count } = await servicio
-      .from('miembros')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('org_id', yo.org_id)
-    if ((count ?? 0) >= MAXIMO_MIEMBROS)
-      throw new ErrorParaMostrar(`El equipo llegó al máximo de ${MAXIMO_MIEMBROS} personas.`)
 
     const { error } = await servicio
       .from('miembros')
       .insert({ user_id: userId, org_id: yo.org_id, rol, locales, nombre, email })
     if (error) throw error
-    return responder({ ok: true, reactivado: false }, 200, origen)
+    return responder({ ok: true, clave, reactivado: false }, 200, origen)
   } catch (error) {
     if (error instanceof ErrorParaMostrar)
       return responder({ ok: false, error: error.message }, error.status, origen)

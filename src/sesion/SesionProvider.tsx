@@ -116,6 +116,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   // undefined = todavía no sabemos si hay sesión.
   const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined)
   const [intento, setIntento] = useState(0)
+  const [claveProvisoria, setClaveProvisoria] = useState(false)
   // Resultado de la última carga, marcado con el usuario e intento a los que corresponde.
   const [carga, setCarga] = useState<{ clave: string; sesion: Sesion } | null>(null)
   const claveActual = usuario ? `${usuario.id}:${intento}` : null
@@ -131,6 +132,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_evento, s) => {
       const nuevo = s?.user ? { id: s.user.id, email: s.user.email ?? '' } : null
+      setClaveProvisoria(s?.user.user_metadata?.clave_provisoria === true)
       // Si es el mismo usuario (por ejemplo, al renovar el token), no se recarga nada.
       setUsuario((previo) => (previo && nuevo && previo.id === nuevo.id ? previo : nuevo))
     })
@@ -191,8 +193,8 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }, [usuario, claveActual])
 
   const valor = useMemo<ValorSesion>(
-    () => ({ sesion, salir, elegirLocal, reintentar, refrescar }),
-    [sesion, salir, elegirLocal, reintentar, refrescar],
+    () => ({ sesion, salir, elegirLocal, reintentar, refrescar, claveProvisoria }),
+    [sesion, salir, elegirLocal, reintentar, refrescar, claveProvisoria],
   )
 
   return <ContextoSesion.Provider value={valor}>{children}</ContextoSesion.Provider>

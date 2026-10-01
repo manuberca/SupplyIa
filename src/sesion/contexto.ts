@@ -24,6 +24,8 @@ export type ValorSesion = {
   salir: () => Promise<void>
   elegirLocal: (id: string) => void
   reintentar: () => void
+  /** La persona todavía usa la contraseña que le generó administración. */
+  claveProvisoria: boolean
   /** Vuelve a traer el bar y los locales sin sacar la pantalla (después de cambiar locales). */
   refrescar: () => Promise<void>
 }

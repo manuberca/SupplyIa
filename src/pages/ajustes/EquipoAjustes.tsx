@@ -8,6 +8,7 @@ import {
   crearLocal,
   editarMiembro,
   invitar,
+  nuevaClave,
   renombrarLocal,
   type LocalDelBar,
   type Miembro,
@@ -410,6 +411,75 @@ function RolYLocales({
   )
 }
 
+/**
+ * La contraseña provisoria de alguien del equipo. Se muestra una sola vez (no se guarda en ningún
+ * lado legible): administración se la pasa a la persona, que la cambia al entrar.
+ */
+function ClaveProvisoria({
+  titulo,
+  nombre,
+  email,
+  clave,
+  onCerrar,
+}: {
+  titulo: string
+  nombre: string
+  email: string
+  clave: string
+  onCerrar: () => void
+}) {
+  const { org } = useSesionLista()
+  const [copiada, setCopiada] = useState(false)
+  const mensaje = `Hola ${nombre}! Te sumé a ${org.nombre} en SupplyIA.\nEntrá a ${window.location.origin}\nMail: ${email}\nContraseña: ${clave}\nCuando entres, cambiala en Ajustes → Cambiar contraseña.`
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(clave)
+      setCopiada(true)
+    } catch {
+      // Sin permiso para copiar: la contraseña está a la vista para copiarla a mano.
+    }
+  }
+
+  return (
+    <div className="card formulario">
+      <p className="aviso aviso--ok" role="status">
+        <strong>{titulo}</strong> Pasale su mail y esta contraseña provisoria: la cambia cuando
+        entra.
+      </p>
+      <dl className="datos">
+        <div>
+          <dt>Mail</dt>
+          <dd>{email}</dd>
+        </div>
+        <div>
+          <dt>Contraseña provisoria</dt>
+          <dd className="mono clave-provisoria">{clave}</dd>
+        </div>
+      </dl>
+      <p className="campo__ayuda">
+        Anotala o mandala ahora: por seguridad no se vuelve a mostrar. Si se pierde, generás otra
+        desde Editar.
+      </p>
+      <a
+        className="boton boton--secundario"
+        href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <MessageCircle size={18} aria-hidden="true" />
+        Mandársela por WhatsApp
+      </a>
+      <button type="button" className="boton boton--secundario" onClick={copiar}>
+        {copiada ? 'Copiada' : 'Copiar la contraseña'}
+      </button>
+      <button type="button" className="boton boton--texto" onClick={onCerrar}>
+        Listo
+      </button>
+    </div>
+  )
+}
+
 function Invitar({
   locales,
   recargar,
@@ -419,14 +489,15 @@ function Invitar({
   recargar: () => Promise<void>
   onCerrar: () => void
 }) {
-  const { org } = useSesionLista()
   const [email, setEmail] = useState('')
   const [nombre, setNombre] = useState('')
   const [rol, setRol] = useState<Rol>('recepcion')
   const [elegidos, setElegidos] = useState<string[] | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
-  const [sumado, setSumado] = useState<{ nombre: string; email: string } | null>(null)
+  const [sumado, setSumado] = useState<{ nombre: string; email: string; clave: string } | null>(
+    null,
+  )
 
   async function sumar(e: FormEvent) {
     e.preventDefault()
@@ -442,31 +513,17 @@ function Invitar({
     const respuesta = await invitar(r.data)
     setGuardando(false)
     if (!respuesta.ok) return setError(respuesta.error)
-    setSumado({ nombre: r.data.nombre, email: r.data.email })
+    setSumado({ nombre: r.data.nombre, email: r.data.email, clave: respuesta.clave })
     await recargar()
   }
 
   if (sumado) {
-    const mensaje = `Hola ${sumado.nombre}! Te sumé a ${org.nombre} en SupplyIA. Entrá a ${window.location.origin} con tu mail (${sumado.email}): tocá "mandame un mail para entrar" y seguí los pasos.`
     return (
-      <div className="card formulario">
-        <p className="aviso aviso--ok" role="status">
-          <strong>{sumado.nombre} ya está en el equipo.</strong> Avisale que entre con su mail (
-          {sumado.email}): no necesita contraseña.
-        </p>
-        <a
-          className="boton boton--secundario"
-          href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <MessageCircle size={18} aria-hidden="true" />
-          Avisarle por WhatsApp
-        </a>
-        <button className="boton boton--texto" onClick={onCerrar}>
-          Listo
-        </button>
-      </div>
+      <ClaveProvisoria
+        titulo={`${sumado.nombre} ya está en el equipo.`}
+        {...sumado}
+        onCerrar={onCerrar}
+      />
     )
   }
 
@@ -526,6 +583,7 @@ function FilaMiembro({
   const [elegidos, setElegidos] = useState<string[] | null>(miembro.locales)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const [clave, setClave] = useState<string | null>(null)
 
   async function hacer(accion: () => Promise<{ ok: true } | { ok: false; mensaje: string }>) {
     setGuardando(true)
@@ -535,6 +593,30 @@ function FilaMiembro({
     if (!r.ok) return setError(r.mensaje)
     setEditando(false)
     await recargar()
+  }
+
+  async function generarClave() {
+    setGuardando(true)
+    setError('')
+    const r = await nuevaClave(miembro.user_id)
+    setGuardando(false)
+    if (!r.ok) return setError(r.error)
+    setEditando(false)
+    setClave(r.clave)
+  }
+
+  if (clave) {
+    return (
+      <div className="lista__fila fila-edicion">
+        <ClaveProvisoria
+          titulo={`${miembro.nombre} tiene una contraseña nueva.`}
+          nombre={miembro.nombre}
+          email={miembro.email ?? ''}
+          clave={clave}
+          onCerrar={() => setClave(null)}
+        />
+      </div>
+    )
   }
 
   if (editando) {
@@ -576,6 +658,16 @@ function FilaMiembro({
           <button type="button" className="boton boton--texto" onClick={() => setEditando(false)}>
             Cancelar
           </button>
+          {!soyYo && (
+            <button
+              type="button"
+              className="boton boton--texto"
+              disabled={guardando}
+              onClick={generarClave}
+            >
+              Nueva contraseña
+            </button>
+          )}
           {!soyYo && (
             <button
               type="button"
