@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../../src/lib/database.types'
+import { formaDeClave, type FormaClave } from '../../../src/lib/forma-clave'
 import { secreto } from '../../lib/entorno'
 import { json, origenPermitido } from '../../lib/http'
 
@@ -18,7 +19,10 @@ export type RespuestaSalud =
       anthropic: Estado
       /** Alguna clave estaba mal pegada y se limpió sola: conviene volver a pegarla bien. */
       clavesCorregidas: string[]
-      version: string
+      /** Cómo es cada clave (largo y formato, nunca el valor), para ver qué se pegó mal. */
+      formas: { supabase: FormaClave; anthropic: FormaClave }
+      /** El proyecto de Supabase al que apunta la app: la clave de servicio tiene que ser de ese. */
+      proyecto: string
     }
   | { ok: false; error: string }
 
@@ -88,7 +92,8 @@ export default async function handler(req: Request): Promise<Response> {
       ...(servicio.corregido ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
       ...(anthropic.corregido ? ['ANTHROPIC_API_KEY'] : []),
     ],
-    version: (process.env.COMMIT_REF ?? 'local').slice(0, 7),
+    formas: { supabase: formaDeClave(servicio.valor), anthropic: formaDeClave(anthropic.valor) },
+    proyecto: new URL(url).hostname.split('.')[0] ?? '',
   }
   return json(cuerpo, 200, origen)
 }
