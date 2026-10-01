@@ -66,6 +66,10 @@ export function armarContexto(datos: {
   return { contexto, idPorRef }
 }
 
+// La foto estaba de costado y la primera lectura salió dudosa. Decir para qué lado girarla es
+// justo lo que más le cuesta a la IA en una boleta densa; elegir entre dos, no.
+const DOS_VERSIONES = `ATENCIÓN: te mando DOS imágenes. Son la MISMA boleta, girada de dos formas: en una el texto se lee derecho y en la otra está cabeza abajo. Mirá las dos, quedate con la que se lee derecho y leé la boleta SOLO de esa. En "giro" poné "90" si la que está derecha es la PRIMERA imagen, o "270" si es la SEGUNDA.`
+
 export type Leido = {
   salida: SalidaModelo
   modelo: string
@@ -75,6 +79,8 @@ export type Leido = {
 
 export async function leerConIA(datos: {
   imagen: string
+  /** La misma foto girada para el otro lado (ver DOS_VERSIONES). */
+  alternativa?: string
   tipo: 'image/jpeg' | 'image/png' | 'image/webp'
   contexto: string
   modelo?: string
@@ -110,11 +116,14 @@ export async function leerConIA(datos: {
           {
             role: 'user',
             content: [
+              ...[datos.imagen, ...(datos.alternativa ? [datos.alternativa] : [])].map((data) => ({
+                type: 'image' as const,
+                source: { type: 'base64' as const, media_type: datos.tipo, data },
+              })),
               {
-                type: 'image',
-                source: { type: 'base64', media_type: datos.tipo, data: datos.imagen },
+                type: 'text',
+                text: datos.alternativa ? `${DOS_VERSIONES}\n\n${datos.contexto}` : datos.contexto,
               },
-              { type: 'text', text: datos.contexto },
             ],
           },
         ],

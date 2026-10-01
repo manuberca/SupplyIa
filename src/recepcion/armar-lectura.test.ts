@@ -4,6 +4,7 @@ import type { SalidaModelo } from './lectura'
 
 const tomate = '11111111-1111-4111-8111-111111111111'
 const salida: SalidaModelo = {
+  giro: '0',
   nro_remito: ' 0003-00041872 ',
   fecha: '29/09/2026',
   proveedor_detectado: 'Verdulería Don Tito',

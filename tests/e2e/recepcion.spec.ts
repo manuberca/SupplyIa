@@ -136,6 +136,7 @@ test('con la IA: lee el remito, marca el aumento y el faltante, y el pedido qued
     duplicado: null,
     uso: { usadas: 1, tope: 100 },
     lectura: {
+      giro: 0,
       nroRemito: `0003-${corrida}`,
       fecha: '30/09/2026',
       proveedorDetectado: nombre,
@@ -319,4 +320,72 @@ test('a mano: el total de la boleta se carga aparte del precio unitario, y con I
   expect(Number(data?.total_remito)).toBe(totalConIva)
   // Los precios unitarios quedan como se cargaron (sin IVA), aparte del total.
   expect(data?.recepcion_items.every((i) => Number(i.precio_unit_base) < totalConIva)).toBe(true)
+})
+
+test('una foto de costado con lectura dudosa se endereza sola y se lee de nuevo', async ({
+  page,
+}) => {
+  const linea = (confianza: 'alta' | 'baja', subtotal: number) => ({
+    texto: 'VACIO X KG',
+    productoId: ids.vacio,
+    cantidad: 2,
+    unidad: 'kg',
+    precioUnit: subtotal / 2,
+    descuentoLinea: null,
+    subtotal,
+    confianza,
+    observacion: '',
+    esPromo: false,
+  })
+  const respuesta = (
+    giro: 0 | 90 | 270,
+    nro: string,
+    confianza: 'alta' | 'baja',
+  ): RespuestaLectura => ({
+    ok: true,
+    duplicado: null,
+    uso: { usadas: 1, tope: 100 },
+    lectura: {
+      giro,
+      nroRemito: nro,
+      fecha: null,
+      proveedorDetectado: null,
+      totales: {
+        subtotalNeto: null,
+        descuentoGlobal: null,
+        iva: null,
+        percepciones: null,
+        total: 60000,
+      },
+      lineas: [linea(confianza, 28400), linea(confianza, 31600)],
+      validacion: { estado: 'OK', observaciones: [] },
+      observaciones: '',
+    },
+  })
+  const pedidos: { imagen: string; alternativa?: string }[] = []
+  await page.route('**/api/ocr', async (route) => {
+    pedidos.push(JSON.parse(route.request().postData() ?? '{}'))
+    // Primera lectura: de costado y dudosa. Segunda: usó la girada 270° y salió bien.
+    await route.fulfill({
+      json:
+        pedidos.length === 1
+          ? respuesta(90, 'DUDOSO', 'baja')
+          : respuesta(270, `0009-${corrida}`, 'alta'),
+    })
+  })
+
+  await entrarComoRecepcion(page)
+  await page.goto(`/recibir/proveedor/${ids.proveedor}`)
+  // Con la pantalla ya dibujada, para que la "foto" tenga contenido (en blanco, girada es igual).
+  await expect(page.getByRole('button', { name: 'Sacá la foto del remito' })).toBeVisible()
+  await page.getByLabel('Foto del remito').setInputFiles(await foto(page))
+
+  await expect(page.getByText(`Remito 0009-${corrida}`)).toBeVisible()
+  expect(pedidos).toHaveLength(2)
+  // La primera vez va la foto como se sacó; la segunda, girada para los dos lados.
+  expect(pedidos[0]!.alternativa).toBeUndefined()
+  expect(pedidos[1]!.alternativa).toBeTruthy()
+  expect(pedidos[1]!.imagen).not.toBe(pedidos[0]!.imagen)
+  expect(pedidos[1]!.alternativa).not.toBe(pedidos[1]!.imagen)
+  await expect(page.getByLabel('Total de la boleta')).toHaveValue('60.000')
 })

@@ -122,7 +122,11 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [x] **Fotos reales de boletas de La Bodeguita** (8, en `~/Downloads/boletas_test`), leídas con la IA de verdad en dev (Bar Demo): Cook Express, Juanchi, Speed y Climp exactas; La Esperanza exacta después de corregir la regla de la columna KG (quesos y fiambres por kilo: el ejemplo heredado estaba al revés); Papelera y Vinesco con los renglones bien pero sin el total en la foto (se carga a mano); Quilmes (de costado y muy densa) solo salió bien enderezada: 12 de 12 subtotales, 2 cantidades mal. Todas dentro del tiempo (4,9 a 19,5 s).
 - [x] El control del total acepta los impuestos que leyó la IA (impuestos internos y percepciones de bebidas), y un regalo en $0 no cuenta como "sin precio".
 - [ ] Deploy de lo anterior y `npm run prod:probar -- --foto ~/Downloads/boletas_test` para confirmar las claves en prod.
-- [ ] Mejora pendiente: enderezar sola la foto cuando viene de costado (la IA lee mucho mejor derecha).
+- [x] **Fotos de costado se enderezan solas** (1/10): la IA avisa si la foto está girada (`giro`); si además la lectura salió dudosa (un cuarto de los renglones, mínimo 2), la app la gira en el celular y la lee de nuevo mandando las dos orientaciones (90° y 270°) para que la IA use la derecha: decir el lado le cuesta (en Quilmes dijo 90° y era 270°), elegir entre dos no. Se queda con la mejor de las dos lecturas y guarda la foto derecha. Una foto de costado que se leyó bien no se relee.
+- [x] Quilmes real, por la app: 2 lecturas, ~25 s, número y total exactos, los 12 subtotales suman el neto de la boleta ($746.148,39), cuentas verificadas con impuestos internos y percepciones (pie de Quilmes explicado en el prompt), 11 productos asignados. Queda 1 cantidad mal (Stella 0.0: 1 en vez de 2).
+- [x] La pantalla ya no pierde el descuento de cada renglón (daba "renglones dudosos" falsos).
+- [x] Las 8 fotos reales, releídas con todo lo anterior: 6 con cuentas OK; Papelera y Vinesco piden revisar solo porque el total no está en la foto. Tiempos: 4,2 a 20,5 s por lectura (el plazo es 24 s: la de Quilmes va justa).
+- [x] Tests: `npm test` 204, `npm run test:db` 70, `npm run e2e` 21.
 - [ ] Manu: ponerse una contraseña en prod (hoy entra solo con el link del mail).
 - [ ] SMTP con Resend + dominio propio: queda para cuando se venda (hoy "mandame un mail" solo le llega a Manu). No traba el piloto.
 - [ ] Alta de los dos bares del piloto con `cliente:alta --prod` (Manu todavía no definió cuáles).

@@ -40,6 +40,8 @@ export type RenglonRemito = {
   unidad: string | null
   precioUnit: number | null
   subtotal: number | null
+  /** Descuento del renglón que leyó la IA (% o $): con él, cantidad × precio da el subtotal. */
+  descuentoLinea?: number | null
 }
 
 export type Fila = {

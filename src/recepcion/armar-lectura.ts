@@ -23,6 +23,7 @@ export function armarLectura(salida: SalidaModelo, idPorRef: Map<string, string>
     },
   )
   return {
+    giro: Number(salida.giro) as Lectura['giro'],
     nroRemito: salida.nro_remito?.trim() || null,
     fecha: salida.fecha,
     proveedorDetectado: salida.proveedor_detectado,

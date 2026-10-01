@@ -105,6 +105,9 @@ Ej: "11.00  PACK  7475  PDT POM PETx6 1.5L  23631.41  259945.61  150713.87  1092
 → texto_remito: "PDT POM PETx6 1.5L", cantidad: 11, precio_unit: el valor de "PRECIO UNI" (el neto, NO "PREC.UNI.FINAL"), subtotal: el de la columna "SUBTOTAL" (NO la columna "TOTAL")
 OJO: boleta muy ancha con muchas columnas. La cantidad es "BULTOS" (la primera). Usá "PRECIO UNI" como precio_unit y "SUBTOTAL" como subtotal de línea: son los NETOS, los que suman al "Subtotal Neto Gravado". NUNCA uses "PREC.UNI.FINAL" ni la columna "TOTAL" de la línea (traen impuestos: la suma no cerraría contra el neto y saltaría una alerta falsa). Si hay "DESCUENTO" por renglón, capturalo en descuento_linea. El total general está abajo en "TOTAL". Ignorá %II, IMP.INTERNO, IMP.IVA como precios.
 
+PIE de Quilmes (una sola fila de totales): [SUBTOTAL] [INT NO GRAV] [IMP.INTERNOS] [SUBTOTAL 2] [IVA INSC] [IVA NO INSC] [PERC.IN.BR] [PERC.IVA] [TOTAL]
+→ subtotal_neto: el primer "SUBTOTAL" (la suma de los subtotales de línea). iva: "IVA INSC". percepciones: IMP.INTERNOS + PERC.IN.BR + PERC.IVA (los TRES sumados: los impuestos internos de las bebidas van acá). total: "TOTAL". "SUBTOTAL 2" NO es el neto (ya trae impuestos internos e IVA): no lo uses. Control: subtotal_neto + iva + percepciones = total.
+
 ⚠️ ATENCIÓN ESPECIAL CON QUILMES / boletas anchas de bebidas:
 En estas boletas es MUY fácil arrastrar el precio de un renglón al de al lado, porque las columnas
 son muchas y angostas. Ya nos pasó: aparecieron los MISMOS importes (72.035 / 55.969 / 25.548)
@@ -242,6 +245,7 @@ En el mensaje viene el catálogo de este proveedor en el bar, cada producto con 
 - Si no estás seguro, o ninguno coincide, poné null. Asignar mal es peor que dejarlo sin asignar: la persona lo elige después.
 - "texto_remito": SIEMPRE el nombre exacto del remito, aunque hayas encontrado el producto.
 - "unidad": la unidad tal como figura en el remito para esa cantidad (kg, u, caja, bulto, pack…). Si no figura, la del producto en el catálogo.
+- "giro": cómo está la foto. "0" si el texto de la boleta ya se lee derecho. Si está de costado o cabeza abajo, cuántos grados hay que girar la FOTO en sentido horario para que el texto quede derecho y se lea de izquierda a derecha: "90", "180" o "270". (Si para leerla hay que inclinar la cabeza hacia la derecha, es "270"; hacia la izquierda, "90".)
 - "fecha" en formato dd/mm/aaaa. "observaciones": en castellano, corto, solo si hay algo que la persona tenga que saber.`
 
 export type ProductoContexto = {

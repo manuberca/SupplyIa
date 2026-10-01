@@ -30,7 +30,8 @@ import {
   type RenglonRemito,
 } from '../../recepcion/conciliar'
 import { chequearCuentas } from '../../recepcion/cuentas'
-import { comprimirFoto, type FotoLista } from '../../recepcion/foto'
+import { convieneEnderezar, mejorLectura } from '../../recepcion/enderezar'
+import { comprimirFoto, girarFoto, type FotoLista } from '../../recepcion/foto'
 import type { Lectura } from '../../recepcion/lectura'
 import { leerRemito, subirFoto } from '../../recepcion/leer'
 import { validarRemito } from '../../recepcion/validar'
@@ -91,6 +92,7 @@ function Recepcion({
   const [foto, setFoto] = useState<FotoLista | null>(null)
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [duplicado, setDuplicado] = useState<string | null>(null)
+  const [enderezando, setEnderezando] = useState(false)
   const [renglones, setRenglones] = useState<RenglonRemito[]>([])
   const [nroRemito, setNroRemito] = useState('')
   // El total que dice la boleta (distinto de la suma de precios unitarios: puede traer IVA).
@@ -128,7 +130,7 @@ function Recepcion({
         cantidad: r.cantidad,
         unidad: r.unidad,
         precioUnit: r.precioUnit,
-        descuentoLinea: null,
+        descuentoLinea: r.descuentoLinea ?? null,
         subtotal: r.subtotal,
         confianza: 'alta',
         observacion: '',
@@ -180,12 +182,32 @@ function Recepcion({
       setPaso('foto')
       return setError('No pudimos procesar la foto. Sacala de nuevo o cargá el remito a mano.')
     }
-    setFoto(lista)
-    const r = await leerRemito(proveedor.id, lista)
+    let r = await leerRemito(proveedor.id, lista)
     if (!r.ok) {
       setPaso('foto')
       return setError(r.error)
     }
+    // Foto de costado y lectura dudosa: se endereza y se lee de nuevo. Si algo falla, vale la primera.
+    const giro = convieneEnderezar(r.lectura)
+    if (giro) {
+      setEnderezando(true)
+      try {
+        // De costado puede ser para cualquiera de los dos lados: van las dos y la IA usa la derecha.
+        const [una, otra] =
+          giro === 180
+            ? [await girarFoto(lista, 180)]
+            : [await girarFoto(lista, 90), await girarFoto(lista, 270)]
+        const segunda = await leerRemito(proveedor.id, una!, otra)
+        if (segunda.ok && mejorLectura(r.lectura, segunda.lectura) === segunda.lectura) {
+          lista = otra && segunda.lectura.giro === 270 ? otra : una!
+          r = { ...segunda, lectura: { ...segunda.lectura, giro: 0 } }
+        }
+      } catch (err) {
+        reportar(err, 'Enderezar foto de remito')
+      }
+      setEnderezando(false)
+    }
+    setFoto(lista)
     setLectura(r.lectura)
     setOrigen('ia')
     setNroRemito(r.lectura.nroRemito ?? '')
@@ -200,6 +222,7 @@ function Recepcion({
         unidad: l.unidad,
         precioUnit: l.precioUnit,
         subtotal: l.subtotal,
+        descuentoLinea: l.descuentoLinea,
       })),
     )
     setPaso('revision')
@@ -420,9 +443,13 @@ function Recepcion({
         <TituloPantalla titulo="Recepción" subtitulo={subtitulo} />
         <section className="card cargando-ia" aria-busy="true" role="status">
           <Sparkles size={36} aria-hidden="true" />
-          <p className="lista__titulo">Leyendo el remito con IA…</p>
+          <p className="lista__titulo">
+            {enderezando ? 'Enderezando la foto y leyendo de nuevo…' : 'Leyendo el remito con IA…'}
+          </p>
           <p className="formulario__ayuda">
-            Tarda unos 15 segundos. Controla renglón por renglón y que las cuentas cierren.
+            {enderezando
+              ? 'La foto estaba de costado y algunos renglones no se leían bien. Unos segundos más.'
+              : 'Tarda unos 15 segundos. Controla renglón por renglón y que las cuentas cierren.'}
           </p>
         </section>
       </>

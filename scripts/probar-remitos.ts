@@ -18,6 +18,7 @@ import sharp from 'sharp'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../src/lib/database.types'
 import { armarLectura } from '../src/recepcion/armar-lectura'
+import { convieneEnderezar, mejorLectura } from '../src/recepcion/enderezar'
 import { armarContexto, leerConIA } from '../netlify/functions/ocr/lector'
 import { puntuar, type RenglonVerdadero } from '../src/recepcion/puntuar'
 import { normalizar } from '../src/lib/normalizar'
@@ -191,7 +192,29 @@ for (const foto of fotos) {
       tipo: 'image/jpeg',
       contexto,
     })
-    const l = armarLectura(leido.salida, idPorRef)
+    let l = armarLectura(leido.salida, idPorRef)
+    // Igual que la app: si la foto está de costado y la lectura salió dudosa, se endereza y se lee otra vez.
+    const giro = convieneEnderezar(l)
+    if (giro) {
+      const girar = (g: number) => sharp(imagen).rotate(g).jpeg({ quality: 80 }).toBuffer()
+      // 90° o 270°: se mandan las dos y la IA usa la que quedó derecha (suele errar el lado).
+      const [una, otraVersion] =
+        giro === 180 ? [await girar(180)] : [await girar(90), await girar(270)]
+      const otra = await leerConIA({
+        imagen: una!.toString('base64'),
+        alternativa: otraVersion?.toString('base64'),
+        tipo: 'image/jpeg',
+        contexto,
+      })
+      const segunda = armarLectura(otra.salida, idPorRef)
+      const elegida = mejorLectura(l, segunda)
+      console.log(
+        `  de costado (dijo ${giro}°): se leyó de nuevo en ${otra.ms} ms${giro === 180 ? '' : `, usó la girada ${segunda.giro}°`} → queda la ${elegida === segunda ? 'enderezada' : 'primera'}`,
+      )
+      l = elegida
+    } else if (l.giro !== 0) {
+      console.log(`  de costado (giro ${l.giro}°), pero se leyó bien: no hizo falta enderezar`)
+    }
     const asignados = l.lineas.filter((x) => x.productoId).length
     const verdad = verdades.find((v) => v.archivo === foto)
     lecturas[foto] = { ms: leido.ms, modelo: leido.modelo, uso: leido.uso, lectura: l }

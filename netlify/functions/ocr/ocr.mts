@@ -103,7 +103,7 @@ export default async function handler(req: Request): Promise<Response> {
     // ─── Qué manda ──────────────────────────────────────────────────────
     const cuerpo = pedidoLecturaSchema.safeParse(await req.json().catch(() => null))
     if (!cuerpo.success) throw new ErrorParaMostrar('La foto no llegó bien. Sacala de nuevo.')
-    const { proveedorId, imagen, tipo } = cuerpo.data
+    const { proveedorId, imagen, alternativa, tipo } = cuerpo.data
 
     // Con la sesión del usuario: RLS garantiza que solo ve su catálogo.
     const [proveedor, productos, equivalencias, correcciones] = await Promise.all([
@@ -166,7 +166,7 @@ export default async function handler(req: Request): Promise<Response> {
       })),
       correcciones: correcciones.data ?? [],
     })
-    const leido = await leerConIA({ imagen, tipo, contexto })
+    const leido = await leerConIA({ imagen, alternativa, tipo, contexto })
     const lectura = armarLectura(leido.salida, idPorRef)
 
     // ¿Ya se cargó este remito?

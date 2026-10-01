@@ -6,8 +6,15 @@ import type { FotoLista } from './foto'
 
 const ESPERA_MAXIMA = 40_000 // la función corta a los ~26 s; esto es por si la red se cuelga
 
-/** Manda la foto a /api/ocr. Nunca tira error: cualquier falla vuelve como mensaje con salida. */
-export async function leerRemito(proveedorId: string, foto: FotoLista): Promise<RespuestaLectura> {
+/**
+ * Manda la foto a /api/ocr. Nunca tira error: cualquier falla vuelve como mensaje con salida.
+ * `alternativa`: la misma foto girada para el otro lado (segunda lectura de una foto de costado).
+ */
+export async function leerRemito(
+  proveedorId: string,
+  foto: FotoLista,
+  alternativa?: FotoLista,
+): Promise<RespuestaLectura> {
   if (!navigator.onLine)
     return { ok: false, error: `${SIN_CONEXION} Sin señal la IA no puede leer: cargalo a mano.` }
   const { data } = await supabase.auth.getSession()
@@ -20,7 +27,12 @@ export async function leerRemito(proveedorId: string, foto: FotoLista): Promise<
     const respuesta = await fetch('/api/ocr', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ proveedorId, imagen: foto.base64, tipo: foto.tipo }),
+      body: JSON.stringify({
+        proveedorId,
+        imagen: foto.base64,
+        alternativa: alternativa?.base64,
+        tipo: foto.tipo,
+      }),
       signal: corte.signal,
     })
     const cuerpo: unknown = await respuesta.json().catch(() => null)

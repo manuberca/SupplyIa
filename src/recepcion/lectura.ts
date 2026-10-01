@@ -7,6 +7,8 @@ const numeroONulo = z.number().nullable()
 
 /** Lo que tiene que devolver el modelo (salida estructurada: el JSON siempre respeta esto). */
 export const salidaModeloSchema = z.object({
+  /** Grados que hay que girar la foto en sentido horario para que el texto quede derecho. */
+  giro: z.enum(['0', '90', '180', '270']),
   nro_remito: z.string().nullable(),
   fecha: z.string().nullable(),
   proveedor_detectado: z.string().nullable(),
@@ -47,6 +49,8 @@ const lineaSchema = z.object({
 })
 
 export const lecturaSchema = z.object({
+  /** Grados (horario) para enderezar la foto. 0 si ya estaba derecha (o en lecturas viejas). */
+  giro: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).default(0),
   nroRemito: z.string().nullable(),
   fecha: z.string().nullable(),
   proveedorDetectado: z.string().nullable(),
@@ -85,6 +89,11 @@ export type RespuestaLectura = z.infer<typeof respuestaLecturaSchema>
 export const pedidoLecturaSchema = z.object({
   proveedorId: z.uuid(),
   imagen: z.string().min(100).max(8_000_000), // base64, la app la comprime a 1600 px
+  /**
+   * Segunda lectura de una foto que estaba de costado: `imagen` es la foto girada 90° (horario) y
+   * `alternativa` la misma girada 270°. La IA usa la que quedó derecha y lo dice en `giro`.
+   */
+  alternativa: z.string().min(100).max(8_000_000).optional(),
   tipo: z.enum(['image/jpeg', 'image/png', 'image/webp']),
 })
 

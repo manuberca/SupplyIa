@@ -20,6 +20,7 @@ const linea = (
   esPromo: false,
 })
 const lectura = (lineas: Lectura['lineas'], nro = '0023-00008686', total = 3000): Lectura => ({
+  giro: 0,
   nroRemito: nro,
   fecha: null,
   proveedorDetectado: null,
