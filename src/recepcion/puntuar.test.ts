@@ -28,6 +28,7 @@ const lectura = (lineas: Lectura['lineas'], nro = '0023-00008686', total = 3000)
   lineas,
   validacion: { estado: 'OK', observaciones: [] },
   observaciones: '',
+  incompleta: false,
 })
 const verdad = {
   nro: '0023-00008686',

@@ -522,6 +522,7 @@ export type Database = {
       productos: {
         Row: {
           activo: boolean
+          comparable_id: string | null
           creado_at: string
           id: string
           nombre: string
@@ -532,6 +533,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          comparable_id?: string | null
           creado_at?: string
           id?: string
           nombre: string
@@ -542,6 +544,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          comparable_id?: string | null
           creado_at?: string
           id?: string
           nombre?: string

@@ -143,18 +143,22 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [ ] Deploy (sin migración) y `npm run prod:probar`.
 - [ ] Siguiente: dominio propio (lo compra Manu) → dirección en Netlify + mails con Resend.
 
-## Mejoras para el piloto (en curso, desde el 3/10)
+## Mejoras para el piloto (hechas en local el 3/10; falta prod)
 
 Orden acordado con Manu: lo que va a pedir el piloto → pedido sugerido → comparar proveedores → boletas largas sin cortes.
 
 - [x] **Corregir una recepción ya confirmada** (administración o encargado, mientras el pedido no esté pagado ni cancelado). Reabre la misma pantalla de revisión con lo guardado (`/recibir/corregir/:id`, desde el pedido o desde el Panel): se cambian cantidades, precios, productos, número y total. Migración `corregir_recepcion` en **dev**: `corregir_recepcion(jsonb)` idempotente, guarda cómo estaba antes en `recepcion_versiones`, rearma renglones, precios y diferencias (conservando el seguimiento de las que siguen), y puede mover el pedido entre "revisar" y "a pagar". Pasa por la cola sin conexión. Al corregir, cada precio se compara con el que había cuando llegó, no con el de esa misma recepción.
 - [x] **La foto del remito en el celular**: plegada en la revisión ("Ver la foto del remito") y, ya guardada, desde el pedido.
 - [x] **Repetir este pedido**: arma un pedido nuevo con las mismas cantidades para revisarlo y mandarlo; avisa lo que ya no se puede pedir igual.
-- [x] Tests: `npm test` 217, `npm run test:db` 76, `npm run e2e` 25.
-- [ ] Migración `corregir_recepcion` en prod (pedir confirmación) y deploy.
-- [ ] Pedido sugerido.
-- [ ] Comparar proveedores.
-- [ ] Boletas largas sin cortes.
+- [x] **Pedido sugerido**: al armar un pedido, "Lo de siempre" propone las cantidades habituales de ese proveedor (mediana de las últimas 6 compras, en la presentación más usada; un producto entra si se compró 2 veces o más). Botón "Usar sugerido" / "Completar" y, en cada renglón, "Lo de siempre: 12 kg". Si todavía no hay pedidos, usa lo recibido en los últimos 60 días. `src/pedidos/sugerido.ts`.
+- [x] **Comparar proveedores**: en Precios, "Comparar con otro proveedor" marca que dos productos de distintos proveedores son el mismo (misma unidad; candidatos ordenados por parecido). Muestra quién lo vende más barato (precios de hasta 90 días), el % de diferencia y cuánto se hubiera ahorrado en 30 días; al armar un pedido avisa "Más barato en X: $…/kg (-14,5%)" si la diferencia es de 3 % o más. Migración `comparables` (`productos.comparable_id`, validada por trigger). `src/control/comparar.ts`.
+- [x] **Boletas largas sin cortes**. Dos cambios:
+  - El límite de las funciones de Netlify es **60 s** (documentación oficial; veníamos asumiendo 26 s). La lectura ahora corre hasta 45 s (`OCR_DEADLINE_MS`), en streaming. Una boleta armada de 60 renglones se leyó entera en 30 s (226/227 campos bien); antes se cortaba a los 24 s.
+  - Si ni así alcanza, no falla: la función corta, rescata los renglones que ya salieron enteros (`rescatarParcial`) y responde con un **pase firmado**; la app pide sola los que faltan ("ya van 38 renglones leídos…") y une las partes (`unirLecturas`: saca el renglón repetido de la costura y controla las cuentas de la boleta entera). Hasta 3 continuaciones; seguir una boleta no cuenta otra lectura en el tope (por eso el pase va firmado con la clave del servidor y vence a los 3 minutos). Si el resto no se puede leer, queda lo leído con el aviso "no se llegó a leer entera".
+  - Probado con la boleta real de Vinesco (25 renglones) forzando el corte a 12 s: 2 partes, los mismos 25 renglones en orden y los mismos importes; el tope contó una sola lectura; un pase tocado o de otro proveedor se rechaza.
+  - `npm run remitos:probar -- <carpeta> --corte 12000` fuerza el corte; `npm run remitos:armar -- … --larga 60` arma una boleta larga de prueba; `prod:probar --foto` sigue las continuaciones igual que la app.
+- [x] Tests: `npm test` 245, `npm run test:db` 77, `npm run e2e` 28, build OK.
+- [ ] Migraciones `corregir_recepcion` y `comparables` en prod (pedir confirmación; van **antes** del push, porque el código nuevo lee `corregida_at` y `comparable_id`), push, y `npm run prod:probar -- --foto <carpeta>` (incluida la boleta larga).
 
 ## Datos en dev
 

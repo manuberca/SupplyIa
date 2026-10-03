@@ -35,6 +35,7 @@ const catalogo: Catalogo = {
       unidad_base_id: 'u-kg',
       umbral_alerta_pct: null,
       activo: true,
+      comparable_id: null,
     },
   ],
   presentaciones: [],

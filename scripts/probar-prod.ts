@@ -20,6 +20,7 @@ import { generarClave } from '../src/equipo/clave.ts'
 import type { RespuestaEquipo } from '../src/equipo/esquemas.ts'
 import type { Database } from '../src/lib/database.types.ts'
 import type { RespuestaLectura } from '../src/recepcion/lectura.ts'
+import { unirLecturas } from '../src/recepcion/continuar.ts'
 import type { RespuestaSalud } from '../netlify/functions/salud/salud.mts'
 
 const REF_PROD = 'xrdujgrbmjgtcwxrkqer'
@@ -285,22 +286,40 @@ if (values.foto) {
       .jpeg({ quality: 80 })
       .toBuffer()
     const inicioLectura = Date.now()
-    const lectura = await api<RespuestaLectura>('/api/ocr', tokenAdmin, {
+    const pedido = {
       proveedorId: proveedor.id,
       imagen: imagen.toString('base64'),
       tipo: 'image/jpeg',
-    })
+    }
+    const lectura = await api<RespuestaLectura>('/api/ocr', tokenAdmin, pedido)
+    // Boleta larga: como la app, pide los renglones que faltan hasta tenerla entera.
+    let l = lectura.cuerpo?.ok ? lectura.cuerpo.lectura : null
+    let continuar = lectura.cuerpo?.ok ? lectura.cuerpo.continuar : null
+    let partes = 1
+    while (l && continuar && partes <= 3) {
+      const mas = await api<RespuestaLectura>('/api/ocr', tokenAdmin, {
+        ...pedido,
+        continuar: continuar.pase,
+      })
+      if (!mas.cuerpo?.ok) break
+      l = unirLecturas(l, mas.cuerpo.lectura)
+      continuar = mas.cuerpo.continuar
+      partes++
+    }
     const segundos = ((Date.now() - inicioLectura) / 1000).toFixed(1)
     const nombre = `La IA lee ${basename(foto)} en producción`
-    if (lectura.cuerpo?.ok) {
-      const l = lectura.cuerpo.lectura
+    if (lectura.cuerpo?.ok && l) {
       control(
         nombre,
-        l.lineas.length > 0,
-        `${segundos} s · boleta ${l.nroRemito ?? '—'} · total ${l.totales.total ?? '—'} · ${l.lineas.length} renglones · lecturas del mes ${lectura.cuerpo.uso.usadas}/${lectura.cuerpo.uso.tope}`,
+        l.lineas.length > 0 && !continuar,
+        `${segundos} s${partes > 1 ? ` en ${partes} partes` : ''}${continuar ? ' (quedó incompleta)' : ''} · boleta ${l.nroRemito ?? '—'} · total ${l.totales.total ?? '—'} · ${l.lineas.length} renglones · cuentas ${l.validacion.estado} · lecturas del mes ${lectura.cuerpo.uso.usadas}/${lectura.cuerpo.uso.tope}`,
       )
     } else {
-      control(nombre, false, lectura.cuerpo?.error ?? `HTTP ${lectura.status}`)
+      control(
+        nombre,
+        false,
+        lectura.cuerpo && !lectura.cuerpo.ok ? lectura.cuerpo.error : `HTTP ${lectura.status}`,
+      )
     }
   }
 } else {

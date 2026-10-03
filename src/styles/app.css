@@ -2149,3 +2149,91 @@ a.boton {
   display: block;
   width: 100%;
 }
+
+/* ─── Pedido sugerido ("lo de siempre") ─── */
+
+.sugerido {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radio);
+  background: var(--petroleo-suave);
+  color: var(--petroleo);
+}
+
+.sugerido > svg {
+  flex-shrink: 0;
+}
+
+.sugerido .lista__texto {
+  flex-grow: 1;
+}
+
+.sugerido .lista__detalle {
+  color: var(--tinta);
+}
+
+.sugerencia {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px dashed var(--petroleo);
+  border-radius: 999px;
+  background: none;
+  color: var(--petroleo);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ─── Comparar proveedores (Precios) ─── */
+
+.comparacion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--linea-suave);
+}
+
+.comparacion > .lista__titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comparacion__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comparacion__lista li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--linea-suave);
+}
+
+.comparacion__lista li[data-actual='true'] .lista__titulo::after {
+  content: ' · este';
+  font-weight: 500;
+  color: var(--gris);
+}
+
+.comparacion__lista .lista__texto {
+  flex-grow: 1;
+}
+
+.mas-barato {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--aviso);
+}

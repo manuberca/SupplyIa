@@ -67,6 +67,8 @@ export const lecturaSchema = z.object({
     observaciones: z.array(z.string()),
   }),
   observaciones: z.string(),
+  /** Boleta muy larga que no se llegó a leer entera: faltan renglones del final. */
+  incompleta: z.boolean().default(false),
 })
 
 export type Lectura = z.infer<typeof lecturaSchema>
@@ -79,6 +81,8 @@ export const respuestaLecturaSchema = z.discriminatedUnion('ok', [
     /** Si ya se cargó un remito con ese número para ese proveedor. */
     duplicado: z.object({ recibidoAt: z.string() }).nullable(),
     uso: z.object({ usadas: z.number(), tope: z.number() }),
+    /** Boleta larga: quedaron renglones sin leer. Con este pase la app pide los que faltan. */
+    continuar: z.object({ leidos: z.number(), pase: z.string() }).nullable().default(null),
   }),
   z.object({ ok: z.literal(false), error: z.string() }),
 ])
@@ -95,6 +99,8 @@ export const pedidoLecturaSchema = z.object({
    */
   alternativa: z.string().min(100).max(8_000_000).optional(),
   tipo: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  /** El pase que devolvió la lectura anterior de esta misma foto (boleta larga). */
+  continuar: z.string().max(2000).optional(),
 })
 
 export type PedidoLectura = z.infer<typeof pedidoLecturaSchema>

@@ -112,6 +112,8 @@ export function Recepcion({
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [duplicado, setDuplicado] = useState<string | null>(null)
   const [enderezando, setEnderezando] = useState(false)
+  /** Boleta larga: renglones ya leídos mientras se pide el resto. */
+  const [leidos, setLeidos] = useState<number | null>(null)
   const [renglones, setRenglones] = useState<RenglonRemito[]>(corrigiendo?.renglones ?? [])
   const [nroRemito, setNroRemito] = useState(corrigiendo?.nroRemito ?? '')
   // El total que dice la boleta (distinto de la suma de precios unitarios: puede traer IVA).
@@ -215,7 +217,8 @@ export function Recepcion({
       setPaso('foto')
       return setError('No pudimos procesar la foto. Sacala de nuevo o cargá el remito a mano.')
     }
-    let r = await leerRemito(proveedor.id, lista)
+    setLeidos(null)
+    let r = await leerRemito(proveedor.id, lista, undefined, setLeidos)
     if (!r.ok) {
       setPaso('foto')
       return setError(r.error)
@@ -230,7 +233,8 @@ export function Recepcion({
           giro === 180
             ? [await girarFoto(lista, 180)]
             : [await girarFoto(lista, 90), await girarFoto(lista, 270)]
-        const segunda = await leerRemito(proveedor.id, una!, otra)
+        setLeidos(null)
+        const segunda = await leerRemito(proveedor.id, una!, otra, setLeidos)
         if (segunda.ok && mejorLectura(r.lectura, segunda.lectura) === segunda.lectura) {
           lista = otra && segunda.lectura.giro === 270 ? otra : una!
           r = { ...segunda, lectura: { ...segunda.lectura, giro: 0 } }
@@ -505,9 +509,11 @@ export function Recepcion({
             {enderezando ? 'Enderezando la foto y leyendo de nuevo…' : 'Leyendo el remito con IA…'}
           </p>
           <p className="formulario__ayuda">
-            {enderezando
-              ? 'La foto estaba de costado y algunos renglones no se leían bien. Unos segundos más.'
-              : 'Tarda unos 15 segundos. Controla renglón por renglón y que las cuentas cierren.'}
+            {leidos
+              ? `La boleta es larga: ya van ${leidos} renglones leídos. Sigo con los que faltan.`
+              : enderezando
+                ? 'La foto estaba de costado y algunos renglones no se leían bien. Unos segundos más.'
+                : 'Tarda unos 15 segundos. Controla renglón por renglón y que las cuentas cierren.'}
           </p>
         </section>
       </>
@@ -634,6 +640,13 @@ export function Recepcion({
           {validacionRenglones && validacionRenglones.observaciones.length > 0 && (
             <p className={`aviso ${cuentasOk ? 'aviso--info' : 'aviso--atencion'}`}>
               {validacionRenglones.observaciones.join(' ')}
+            </p>
+          )}
+          {lectura?.incompleta && (
+            <p className="aviso aviso--atencion" role="alert">
+              <TriangleAlert size={16} aria-hidden="true" /> La boleta es muy larga y no se llegó a
+              leer entera: se leyeron los primeros {lectura.lineas.length} renglones. Agregá a mano
+              los que faltan al final.
             </p>
           )}
           {lectura?.observaciones && (

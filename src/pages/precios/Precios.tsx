@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { EsperarCatalogo } from '../../catalogo/EsperarCatalogo'
 import type { Catalogo } from '../../catalogo/tipos'
 import { useControl, type DatosControl } from '../../control/contexto'
+import { Comparacion } from '../../control/Comparacion'
 import { GraficoPrecio } from '../../control/GraficoPrecio'
 import { pesos, porcentaje } from '../../lib/formato'
 import { hace } from '../../lib/tiempo'
@@ -132,6 +133,12 @@ function Contenido({ catalogo, datos }: { catalogo: Catalogo; datos: DatosContro
             unidad={unidadDe(elegido.producto.unidad_base_id)}
           />
           <p className="campo__ayuda">Última compra {hace(elegido.variacion.fechaUltimo)}</p>
+          <Comparacion
+            key={elegido.producto.id}
+            producto={elegido.producto}
+            catalogo={catalogo}
+            datos={datos}
+          />
         </section>
       )}
 

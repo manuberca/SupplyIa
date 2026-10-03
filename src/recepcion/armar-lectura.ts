@@ -49,5 +49,6 @@ export function armarLectura(salida: SalidaModelo, idPorRef: Map<string, string>
     })),
     validacion: { estado: validacion.estado, observaciones: validacion.observaciones },
     observaciones: salida.observaciones,
+    incompleta: false,
   }
 }

@@ -120,6 +120,7 @@ export function ControlProvider({ children }: { children: ReactNode }) {
       estado: 'listo',
       datos: {
         precios: crudo.precios,
+        renglones: crudo.renglones,
         variaciones: vars,
         gasto,
         metricas: metricasProveedores(crudo.renglones, ahora),

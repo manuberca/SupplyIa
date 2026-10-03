@@ -5,6 +5,8 @@
 //
 // Uso:
 //   npm run remitos:armar -- --boletas <boletas.json> --salida <carpeta> [--cantidad 12] [--semilla 7]
+//   npm run remitos:armar -- --boletas <boletas.json> --salida <carpeta> --larga 60 [--proveedor "La Esperanza"]
+//     (una sola boleta de 60 renglones, para probar que las boletas largas se leen en partes)
 //
 // Deja en la carpeta: las imágenes (.jpg), proveedores.json (para remitos:probar) y verdad.json
 // (lo que debería leerse). La carpeta va fuera del repo: tiene precios reales de proveedores.
@@ -74,6 +76,8 @@ const { values } = parseArgs({
     salida: { type: 'string' },
     cantidad: { type: 'string', default: '12' },
     semilla: { type: 'string', default: '7' },
+    larga: { type: 'string' },
+    proveedor: { type: 'string', default: 'La Esperanza' },
   },
 })
 if (!values.boletas || !existsSync(values.boletas) || !values.salida) {
@@ -131,6 +135,43 @@ for (let vuelta = 0; elegidas.length < cantidad && vuelta < 10; vuelta++) {
     const b = lista[Math.floor(azar() * lista.length)]
     if (b && !elegidas.includes(b)) elegidas.push(b)
   }
+}
+
+// --larga N: una sola boleta, con N renglones distintos sacados de varias boletas del proveedor.
+if (values.larga) {
+  const vistos = new Set<string>()
+  const items = boletas
+    .filter((b) => b.proveedor === values.proveedor)
+    .flatMap((b) => b.items ?? [])
+    .filter((i) => {
+      const texto = i.productoOriginalBoleta?.trim()
+      if (
+        !texto ||
+        vistos.has(texto) ||
+        !(num(i.precioUnit) > 0) ||
+        !coherente([i], num(i.subtotal))
+      )
+        return false
+      vistos.add(texto)
+      return true
+    })
+    .slice(0, Number(values.larga))
+  if (items.length < Number(values.larga)) {
+    console.error(
+      `${values.proveedor} solo tiene ${items.length} renglones distintos para armarla.`,
+    )
+    process.exit(1)
+  }
+  const neto = items.reduce((s, i) => s + num(i.subtotal), 0)
+  elegidas.length = 0
+  elegidas.push({
+    id: `larga-${items.length}`,
+    nroBoleta: `0099-${String(items.length).padStart(8, '0')}`,
+    proveedor: values.proveedor!,
+    fecha: '03/10/2026',
+    total: Math.round(neto * 1.21 * 100) / 100,
+    items,
+  })
 }
 
 // ─── Números como los escribe cada proveedor ─────────────────────────────
@@ -219,9 +260,9 @@ const proveedores: Record<string, string> = {}
 
 for (const [n, b] of elegidas.entries()) {
   const estilo = ESTILO_DE[b.proveedor]!
-  const defectos = [['borroso'], ['poca luz'], [], ['de costado'], [], ['borroso', 'poca luz']][
-    n % 6
-  ]!
+  const defectos = values.larga
+    ? []
+    : [['borroso'], ['poca luz'], [], ['de costado'], [], ['borroso', 'poca luz']][n % 6]!
   const { pagina: contenido, total } = html(b, estilo, defectos)
   const archivo = `${String(n + 1).padStart(2, '0')}-${b.proveedor.replace(/\W+/g, '-').toLowerCase()}.jpg`
   await pagina.setContent(contenido)
@@ -232,6 +273,8 @@ for (const [n, b] of elegidas.entries()) {
     path: join(values.salida, archivo),
     type: 'jpeg',
     quality: 82,
+    // Una boleta larga no entra en la pantalla: el recorte es sobre la página entera.
+    fullPage: true,
     clip: {
       x: Math.max(0, caja.x - margen),
       y: Math.max(0, caja.y - margen),

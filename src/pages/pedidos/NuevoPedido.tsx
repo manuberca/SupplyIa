@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { Minus, Plus, Search, Send } from 'lucide-react'
+import { History, Minus, Plus, Search, Send } from 'lucide-react'
 import { EsperarCatalogo } from '../../catalogo/EsperarCatalogo'
 import type { Catalogo, Producto, Proveedor } from '../../catalogo/tipos'
 import { TituloPantalla } from '../../components/TituloPantalla'
-import { leerNumero, numero, pesos } from '../../lib/formato'
+import { leerNumero, numero, pesos, porcentaje } from '../../lib/formato'
 import { normalizar } from '../../lib/normalizar'
 import { hace, textoProximaEntrega } from '../../lib/tiempo'
 import { useCola } from '../../offline/contexto'
@@ -16,7 +16,11 @@ import {
   leerBorrador,
   type Borrador,
 } from '../../pedidos/borrador'
-import { enlaceWhatsapp, estimado, plural } from '../../pedidos/logica'
+import { masBaratoEnOtro } from '../../control/comparar'
+import { useControl } from '../../control/contexto'
+import { usePedidos } from '../../pedidos/contexto'
+import { enlaceWhatsapp, estimado, plural, textoCantidad } from '../../pedidos/logica'
+import { sugerirPedido, type CompraAnterior, type Sugerencia } from '../../pedidos/sugerido'
 import { useSesionLista } from '../../sesion/contexto'
 
 export function NuevoPedido() {
@@ -61,6 +65,75 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
   }, [usuario.id, proveedor.id, borrador])
 
   const productos = catalogo.productos.filter((p) => p.proveedor_id === proveedor.id && p.activo)
+
+  // Pedido sugerido: lo que se le viene pidiendo a este proveedor (o, si todavía no hay
+  // pedidos hechos con la app, lo que se le vino recibiendo).
+  const { pedidos } = usePedidos()
+  const control = useControl()
+  const renglonesRecibidos = control.estado === 'listo' ? control.datos.renglones : null
+  const sugerido = useMemo(() => {
+    const dePedidos: CompraAnterior[] = pedidos
+      .filter(
+        (p) => p.proveedor_id === proveedor.id && !['borrador', 'cancelado'].includes(p.estado),
+      )
+      .map((p) => ({
+        fecha: p.creado_at,
+        items: p.items.map((i) => ({
+          productoId: i.producto_id,
+          cantidad: i.cantidad,
+          presentacionId: i.presentacion_id,
+        })),
+      }))
+    let origen: 'pedidos' | 'recibido' = 'pedidos'
+    let resultado = sugerirPedido(dePedidos)
+    if (resultado.sugerencias.length === 0 && renglonesRecibidos) {
+      const porRecepcion = new Map<string, CompraAnterior>()
+      for (const r of renglonesRecibidos) {
+        if (r.proveedor_id !== proveedor.id || !r.producto_id || !r.cantidad_base) continue
+        const compra = porRecepcion.get(r.recepcion_id) ?? { fecha: r.recibido_at, items: [] }
+        compra.items.push({
+          productoId: r.producto_id,
+          cantidad: r.cantidad_base,
+          presentacionId: null,
+        })
+        porRecepcion.set(r.recepcion_id, compra)
+      }
+      origen = 'recibido'
+      resultado = sugerirPedido([...porRecepcion.values()], { redondear: true })
+    }
+    // Solo lo que hoy se puede pedir igual (producto activo, presentación que existe).
+    const validas = resultado.sugerencias.filter(
+      (s) =>
+        catalogo.productos.some((p) => p.id === s.productoId && p.activo) &&
+        (s.presentacionId === null ||
+          catalogo.presentaciones.some((x) => x.id === s.presentacionId)),
+    )
+    return {
+      origen,
+      compras: resultado.compras,
+      porProducto: new Map(validas.map((s) => [s.productoId, s])),
+    }
+  }, [pedidos, renglonesRecibidos, proveedor.id, catalogo])
+  const sinCantidad = (productoId: string) => !borrador.cantidades[productoId]?.texto.trim()
+  // "Usar sugerido" carga solo lo habitual; el resto guía la cantidad en cada producto.
+  const porSugerir = [...sugerido.porProducto.values()].filter(
+    (s) => s.habitual && sinCantidad(s.productoId),
+  )
+
+  function usarSugerido() {
+    setBorrador((b) => {
+      const cantidades = { ...b.cantidades }
+      for (const s of sugerido.porProducto.values()) {
+        if (!s.habitual || cantidades[s.productoId]?.texto.trim()) continue
+        cantidades[s.productoId] = {
+          texto: numero(s.cantidad, 3),
+          presentacionId: s.presentacionId,
+        }
+      }
+      return { ...b, cantidades }
+    })
+  }
+
   const q = normalizar(busqueda)
   const visibles = q ? productos.filter((p) => normalizar(p.nombre).includes(q)) : productos
 
@@ -200,6 +273,24 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
               </label>
             )}
 
+            {porSugerir.length > 0 && (
+              <section className="sugerido" aria-label="Pedido sugerido">
+                <History size={20} aria-hidden="true" />
+                <div className="lista__texto">
+                  <span className="lista__titulo">Lo de siempre</span>
+                  <span className="lista__detalle">
+                    {porSugerir.length} {porSugerir.length === 1 ? 'producto' : 'productos'} que le{' '}
+                    {sugerido.origen === 'pedidos' ? 'venís pidiendo' : 'venís comprando'}, según{' '}
+                    {sugerido.origen === 'pedidos' ? 'tus últimos' : 'las últimas'}{' '}
+                    {sugerido.compras} {sugerido.origen === 'pedidos' ? 'pedidos' : 'entregas'}.
+                  </span>
+                </div>
+                <button className="boton boton--secundario boton--chico" onClick={usarSugerido}>
+                  {items.length > 0 ? 'Completar' : 'Usar sugerido'}
+                </button>
+              </section>
+            )}
+
             <div className="sobretitulo">Lo que le comprás · último precio pagado</div>
             <section className="lista" aria-label="Productos">
               {visibles.length === 0 && (
@@ -211,6 +302,7 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
                   catalogo={catalogo}
                   producto={p}
                   valor={borrador.cantidades[p.id] ?? { texto: '', presentacionId: null }}
+                  sugerencia={sinCantidad(p.id) ? sugerido.porProducto.get(p.id) : undefined}
                   onCambiar={(c) => cambiar(p.id, c)}
                 />
               ))}
@@ -296,17 +388,22 @@ function FilaProducto({
   catalogo,
   producto,
   valor,
+  sugerencia,
   onCambiar,
 }: {
   catalogo: Catalogo
   producto: Producto
   valor: Borrador['cantidades'][string]
+  /** Lo que se suele pedir de este producto, si todavía no se cargó una cantidad. */
+  sugerencia?: Sugerencia
   onCambiar: (c: Partial<Borrador['cantidades'][string]>) => void
 }) {
   const unidad = catalogo.unidades.find((u) => u.id === producto.unidad_base_id)
   const presentaciones = catalogo.presentaciones.filter((p) => p.producto_id === producto.id)
   const presentacion = presentaciones.find((p) => p.id === valor.presentacionId) ?? null
   const precio = catalogo.precios.get(producto.id)
+  // El mismo producto, marcado como comparable, en otro proveedor que lo tiene más barato.
+  const otro = producto.comparable_id ? masBaratoEnOtro(producto, catalogo, new Date()) : null
   const cantidad = leerNumero(valor.texto) ?? 0
   // "5 unidades", "2 cajas": en plural salvo que sea 1 (kg, g y lt no cambian).
   const nombreUnidad = presentacion ? presentacion.nombre.toLowerCase() : (unidad?.nombre ?? '')
@@ -354,6 +451,32 @@ function FilaProducto({
           </button>
         </div>
       </div>
+      {otro && (
+        <span className="mas-barato">
+          Más barato en {catalogo.proveedores.find((p) => p.id === otro.proveedorId)?.nombre}:{' '}
+          {pesos(otro.precio)}/{unidad?.nombre} ({porcentaje(-otro.menosPct)})
+        </span>
+      )}
+      {sugerencia && unidad && (
+        <button
+          type="button"
+          className="sugerencia"
+          onClick={() =>
+            onCambiar({
+              texto: numero(sugerencia.cantidad, 3),
+              presentacionId: sugerencia.presentacionId,
+            })
+          }
+        >
+          <History size={14} aria-hidden="true" />
+          Lo de siempre:{' '}
+          {textoCantidad(
+            sugerencia.cantidad,
+            unidad,
+            presentaciones.find((p) => p.id === sugerencia.presentacionId),
+          )}
+        </button>
+      )}
       {presentaciones.length > 0 && unidad && (
         <div
           className="chips chips--chicos"

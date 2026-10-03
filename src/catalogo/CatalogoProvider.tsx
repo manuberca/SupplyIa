@@ -46,7 +46,7 @@ async function cargar(): Promise<EstadoCatalogo> {
     todasLasFilas((a, b) =>
       supabase
         .from('productos')
-        .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo')
+        .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo, comparable_id')
         .order('nombre')
         .order('id')
         .range(a, b),

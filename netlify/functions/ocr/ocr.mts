@@ -3,7 +3,11 @@
 // catálogo de ese bar y ese proveedor, lee la foto con Claude (salida estructurada) y controla
 // las cuentas antes de responder. La clave de Anthropic vive solo acá (variables de Netlify).
 //
-// Se puede cambiar el modelo sin redeployar: OCR_MODEL, OCR_EFFORT y OCR_DEADLINE_MS.
+// Una boleta muy larga no llega a leerse en el tiempo de una función: se corta antes del límite,
+// se responde con los renglones leídos y un pase firmado, y la app pide el resto con ese pase
+// (src/recepcion/continuar.ts). Seguir una boleta no cuenta otra lectura en el tope.
+//
+// Se configura con variables de entorno: OCR_MODEL, OCR_EFFORT y OCR_DEADLINE_MS.
 
 import Anthropic from '@anthropic-ai/sdk'
 import * as Sentry from '@sentry/node'
@@ -11,8 +15,10 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../../src/lib/database.types'
 import { pedidoLecturaSchema, type RespuestaLectura } from '../../../src/recepcion/lectura'
 import { armarLectura } from '../../../src/recepcion/armar-lectura'
+import { pistaDelUltimo } from '../../../src/recepcion/continuar'
+import { abrirPase, firmarPase, MAX_VUELTAS, VIGENCIA_PASE_MS } from '../../../src/recepcion/pase'
 import { iniciarSentry, secreto } from '../../lib/entorno'
-import { armarContexto, ErrorDeLectura, leerConIA, mensajeDeLaApi } from './lector'
+import { armarContexto, configuracion, ErrorDeLectura, leerConIA, mensajeDeLaApi } from './lector'
 
 export const config = { path: '/api/ocr' }
 
@@ -56,6 +62,7 @@ function mesActual(): string {
 }
 
 export default async function handler(req: Request): Promise<Response> {
+  const llegada = Date.now()
   const origen = origenPermitido(req)
   if (origen === false) return responder({ ok: false, error: 'Acceso no permitido.' }, 403)
   if (req.method !== 'POST')
@@ -105,6 +112,20 @@ export default async function handler(req: Request): Promise<Response> {
     if (!cuerpo.success) throw new ErrorParaMostrar('La foto no llegó bien. Sacala de nuevo.')
     const { proveedorId, imagen, alternativa, tipo } = cuerpo.data
 
+    // Boleta larga: sigue una lectura que se cortó por tiempo. El pase lo firmó esta función.
+    const pase = cuerpo.data.continuar
+      ? await abrirPase(claveServicio, cuerpo.data.continuar)
+      : null
+    if (
+      cuerpo.data.continuar &&
+      (!pase ||
+        pase.org !== miembro.org_id ||
+        pase.proveedor !== proveedorId ||
+        pase.vuelta >= MAX_VUELTAS)
+    ) {
+      throw new ErrorParaMostrar('La lectura se interrumpió. Sacá la foto de nuevo.')
+    }
+
     // Con la sesión del usuario: RLS garantiza que solo ve su catálogo.
     const [proveedor, productos, equivalencias, correcciones] = await Promise.all([
       db.from('proveedores').select('id, nombre').eq('id', proveedorId).maybeSingle(),
@@ -134,20 +155,27 @@ export default async function handler(req: Request): Promise<Response> {
     }
 
     // ─── Tope del mes ───────────────────────────────────────────────────
-    const mes = mesActual()
-    const { data: reserva, error: errorReserva } = await servicio.rpc('reservar_lectura', {
-      p_org: miembro.org_id,
-      p_mes: mes,
-    })
-    if (errorReserva) throw errorReserva
-    const uso = reserva as { ok: boolean; usadas: number; tope: number }
-    if (!uso.ok) {
-      throw new ErrorParaMostrar(
-        `Llegaste al tope de ${uso.tope} lecturas con IA de este mes. Cargá el remito a mano; el mes que viene se renueva.`,
-        429,
-      )
+    // Seguir una boleta larga no cuenta de nuevo: es la misma lectura.
+    let uso: { usadas: number; tope: number }
+    if (pase) {
+      uso = { usadas: pase.usadas, tope: pase.tope }
+    } else {
+      const mes = mesActual()
+      const { data: reserva, error: errorReserva } = await servicio.rpc('reservar_lectura', {
+        p_org: miembro.org_id,
+        p_mes: mes,
+      })
+      if (errorReserva) throw errorReserva
+      const reservado = reserva as { ok: boolean; usadas: number; tope: number }
+      if (!reservado.ok) {
+        throw new ErrorParaMostrar(
+          `Llegaste al tope de ${reservado.tope} lecturas con IA de este mes. Cargá el remito a mano; el mes que viene se renueva.`,
+          429,
+        )
+      }
+      uso = reservado
+      reservada = { org: miembro.org_id, mes }
     }
-    reservada = { org: miembro.org_id, mes }
 
     // ─── Lectura ────────────────────────────────────────────────────────
     const { contexto, idPorRef } = armarContexto({
@@ -166,8 +194,36 @@ export default async function handler(req: Request): Promise<Response> {
       })),
       correcciones: correcciones.data ?? [],
     })
-    const leido = await leerConIA({ imagen, alternativa, tipo, contexto })
+    const leido = await leerConIA({
+      imagen,
+      alternativa,
+      tipo,
+      contexto,
+      continuar: pase ? { desde: pase.desde, ultimo: pase.ultimo } : undefined,
+      // Lo que ya se fue en la sesión y el catálogo se descuenta del tiempo de lectura.
+      corteMs: configuracion().corteMs - (Date.now() - llegada),
+    })
     const lectura = armarLectura(leido.salida, idPorRef)
+
+    // Se cortó por tiempo: el pase para pedir los renglones que faltan.
+    const ultimo = leido.salida.items.at(-1)
+    const leidos = (pase?.desde ?? 0) + leido.salida.items.length
+    const continuar =
+      !leido.completa && ultimo
+        ? {
+            leidos,
+            pase: await firmarPase(claveServicio, {
+              org: miembro.org_id,
+              proveedor: proveedorId,
+              desde: leidos,
+              ultimo: pistaDelUltimo(ultimo),
+              usadas: uso.usadas,
+              tope: uso.tope,
+              vuelta: (pase?.vuelta ?? 0) + 1,
+              vence: Date.now() + VIGENCIA_PASE_MS,
+            }),
+          }
+        : null
 
     // ¿Ya se cargó este remito?
     let duplicado: { recibidoAt: string } | null = null
@@ -187,12 +243,14 @@ export default async function handler(req: Request): Promise<Response> {
         modelo: leido.modelo,
         ms: leido.ms,
         renglones: lectura.lineas.length,
+        completa: leido.completa,
+        desde: pase?.desde ?? 0,
         estado: lectura.validacion.estado,
         tokens: leido.uso,
       }),
     )
     return responder(
-      { ok: true, lectura, duplicado, uso: { usadas: uso.usadas, tope: uso.tope } },
+      { ok: true, lectura, duplicado, uso: { usadas: uso.usadas, tope: uso.tope }, continuar },
       200,
       origen,
     )

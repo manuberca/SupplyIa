@@ -18,6 +18,8 @@ import sharp from 'sharp'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../src/lib/database.types'
 import { armarLectura } from '../src/recepcion/armar-lectura'
+import { pistaDelUltimo, unirLecturas } from '../src/recepcion/continuar'
+import { MAX_VUELTAS } from '../src/recepcion/pase'
 import { convieneEnderezar, mejorLectura } from '../src/recepcion/enderezar'
 import { armarContexto, leerConIA } from '../netlify/functions/ocr/lector'
 import { puntuar, type RenglonVerdadero } from '../src/recepcion/puntuar'
@@ -36,6 +38,8 @@ const { values, positionals } = parseArgs({
     'sin-equivalencias': { type: 'boolean', default: false },
     // Solo algunas fotos, separadas por coma (por ejemplo, las que fallaron).
     solo: { type: 'string' },
+    // Corta cada lectura a los tantos ms, para probar las boletas largas (se sigue leyendo sola).
+    corte: { type: 'string' },
   },
 })
 const carpeta = positionals[0]
@@ -64,6 +68,37 @@ const { data: org } = await db
   .eq('nombre', values.bar!)
   .maybeSingle()
 if (!org) salir(`No encontré la organización "${values.bar}" en dev.`)
+
+/** Como la app: si la lectura se corta por tiempo, pide los renglones que faltan y une las partes. */
+async function leerEntera(datos: Parameters<typeof leerConIA>[0], idPorRef: Map<string, string>) {
+  const corteMs = values.corte ? Number(values.corte) : undefined
+  let leido = await leerConIA({ ...datos, corteMs })
+  const primera = leido
+  let lectura = armarLectura(leido.salida, idPorRef)
+  let leidos = leido.salida.items.length
+  let ms = leido.ms
+  let partes = 1
+  while (!leido.completa && partes <= MAX_VUELTAS) {
+    console.log(`  cortada a los ${leido.ms} ms con ${leidos} renglones: sigue desde ahí`)
+    try {
+      leido = await leerConIA({
+        ...datos,
+        corteMs,
+        continuar: { desde: leidos, ultimo: pistaDelUltimo(leido.salida.items.at(-1)!) },
+      })
+    } catch (error) {
+      // Como la app: si el resto no se pudo leer, queda lo leído y se avisa que faltan renglones.
+      console.log(`  el resto no se pudo leer: ${error instanceof Error ? error.message : error}`)
+      break
+    }
+    lectura = unirLecturas(lectura, armarLectura(leido.salida, idPorRef))
+    leidos += leido.salida.items.length
+    ms += leido.ms
+    partes++
+  }
+  if (!leido.completa) lectura = { ...lectura, incompleta: true }
+  return { lectura, ms, partes, modelo: primera.modelo, uso: primera.uso }
+}
 
 const soloEstas = values.solo ? new Set(values.solo.split(',').map((x) => x.trim())) : null
 const fotos = readdirSync(carpeta!)
@@ -187,12 +222,11 @@ for (const foto of fotos) {
     .toBuffer()
 
   try {
-    const leido = await leerConIA({
-      imagen: imagen.toString('base64'),
-      tipo: 'image/jpeg',
-      contexto,
-    })
-    let l = armarLectura(leido.salida, idPorRef)
+    const leido = await leerEntera(
+      { imagen: imagen.toString('base64'), tipo: 'image/jpeg', contexto },
+      idPorRef,
+    )
+    let l = leido.lectura
     // Igual que la app: si la foto está de costado y la lectura salió dudosa, se endereza y se lee otra vez.
     const giro = convieneEnderezar(l)
     if (giro) {
@@ -200,13 +234,16 @@ for (const foto of fotos) {
       // 90° o 270°: se mandan las dos y la IA usa la que quedó derecha (suele errar el lado).
       const [una, otraVersion] =
         giro === 180 ? [await girar(180)] : [await girar(90), await girar(270)]
-      const otra = await leerConIA({
-        imagen: una!.toString('base64'),
-        alternativa: otraVersion?.toString('base64'),
-        tipo: 'image/jpeg',
-        contexto,
-      })
-      const segunda = armarLectura(otra.salida, idPorRef)
+      const otra = await leerEntera(
+        {
+          imagen: una!.toString('base64'),
+          alternativa: otraVersion?.toString('base64'),
+          tipo: 'image/jpeg',
+          contexto,
+        },
+        idPorRef,
+      )
+      const segunda = otra.lectura
       const elegida = mejorLectura(l, segunda)
       console.log(
         `  de costado (dijo ${giro}°): se leyó de nuevo en ${otra.ms} ms${giro === 180 ? '' : `, usó la girada ${segunda.giro}°`} → queda la ${elegida === segunda ? 'enderezada' : 'primera'}`,
@@ -233,7 +270,7 @@ for (const foto of fotos) {
     }
     const puntaje = p ? `${p.aciertos}/${p.campos}` : undefined
     console.log(
-      `  ${leido.ms} ms · ${l.lineas.length} renglones · ${asignados} asignados · cuentas: ${l.validacion.estado}${puntaje ? ` · puntaje ${puntaje}` : ''}`,
+      `  ${leido.ms} ms${leido.partes > 1 ? ` en ${leido.partes} partes` : ''}${l.incompleta ? ' (INCOMPLETA)' : ''} · ${l.lineas.length} renglones · ${asignados} asignados · cuentas: ${l.validacion.estado}${puntaje ? ` · puntaje ${puntaje}` : ''}`,
     )
     resumen.push({
       foto,
@@ -274,7 +311,7 @@ for (const foto of fotos) {
           `| ${x.texto} | ${x.productoId ? nombres.get(x.productoId) : '**sin asignar**'} | ${x.cantidad ?? '—'} | ${x.unidad ?? '—'} | ${pesos(x.precioUnit)} | ${pesos(x.subtotal)} | ${x.confianza}${x.observacion ? ` — ${x.observacion}` : ''} |`,
       ),
       '',
-      `Tokens: ${leido.uso.input_tokens} de entrada (${leido.uso.cache_read_input_tokens ?? 0} desde la caché), ${leido.uso.output_tokens} de salida.`,
+      `Tokens: ${leido.uso?.input_tokens ?? '—'} de entrada (${leido.uso?.cache_read_input_tokens ?? 0} desde la caché), ${leido.uso?.output_tokens ?? '—'} de salida.`,
       '',
       '**Contra el papel:** ☐ número ☐ total ☐ cantidades ☐ precios ☐ productos bien asignados',
       '',
@@ -324,8 +361,8 @@ if (camposTotales) {
     `Puntaje total: ${aciertosTotales}/${camposTotales} (${((aciertosTotales / camposTotales) * 100).toFixed(1)}%)`,
   )
 }
-const lentos = resumen.filter((r) => r.ms > 22_000)
+const lentos = resumen.filter((r) => r.ms > 45_000)
 if (lentos.length)
   console.log(
-    `⚠ ${lentos.length} tardaron más de 22 s: en Netlify pueden cortarse (ver OCR_DEADLINE_MS).`,
+    `⚠ ${lentos.length} tardaron más de 45 s: en la app se leen en dos partes (ver OCR_DEADLINE_MS).`,
   )

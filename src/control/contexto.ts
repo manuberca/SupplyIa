@@ -1,8 +1,16 @@
 import { createContext, useContext } from 'react'
-import type { Alerta, MetricasProveedor, PrecioHistorico, VariacionProducto } from './metricas'
+import type {
+  Alerta,
+  MetricasProveedor,
+  PrecioHistorico,
+  RenglonRecibido,
+  VariacionProducto,
+} from './metricas'
 
 export type DatosControl = {
   precios: PrecioHistorico[]
+  /** Lo recibido en los últimos 60 días (para el pedido sugerido cuando no hay pedidos). */
+  renglones: RenglonRecibido[]
   variaciones: Map<string, VariacionProducto>
   gasto: Map<string, number>
   metricas: Map<string, MetricasProveedor>

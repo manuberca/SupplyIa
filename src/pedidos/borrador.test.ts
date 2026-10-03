@@ -9,6 +9,7 @@ const producto = (id: string, activo = true) => ({
   unidad_base_id: 'kg',
   umbral_alerta_pct: null,
   activo,
+  comparable_id: null,
 })
 const catalogo: Catalogo = {
   ajustes: AJUSTES_POR_DEFECTO,

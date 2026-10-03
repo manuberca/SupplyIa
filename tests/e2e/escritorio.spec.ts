@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../src/lib/database.types'
-import { ORGS, USUARIOS } from '../db/datos'
+import { LOCALES, ORGS, USUARIOS } from '../db/datos'
 
 const clave = process.env.DEV_TEST_PASSWORD ?? ''
 const capturas = process.env.CAPTURAS
@@ -161,4 +161,37 @@ test('primeros pasos en Inicio, y cómo instalar la app', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '¿Qué necesitás hoy?' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Pedidos en curso' })).toBeVisible()
   await expect(pasos).toHaveCount(0)
+})
+
+test('pedido sugerido: lo que se le viene pidiendo al proveedor, con un toque', async ({
+  page,
+}) => {
+  // Dos pedidos anteriores de harina: 10 y 14 kg → lo de siempre son 12.
+  for (const cantidad of [10, 14]) {
+    const { error } = await db.rpc('guardar_pedido', {
+      pedido: {
+        id: randomUUID(),
+        local_id: LOCALES.aCentro.id,
+        proveedor_id: proveedor,
+        items: [{ id: randomUUID(), producto_id: producto, cantidad, precio_estimado_base: 1200 }],
+      },
+    })
+    if (error) throw error
+  }
+
+  await entrar(page)
+  await page.goto(`/pedir/${proveedor}`)
+  const sugerido = page.getByRole('region', { name: 'Pedido sugerido' })
+  await expect(sugerido).toContainText(
+    '1 producto que le venís pidiendo, según tus últimos 2 pedidos',
+  )
+  await expect(page.getByRole('button', { name: 'Lo de siempre: 12 kg' })).toBeVisible()
+  if (capturas) await page.screenshot({ path: `${capturas}/d4-sugerido.png`, fullPage: true })
+
+  await sugerido.getByRole('button', { name: 'Usar sugerido' }).click()
+  await expect(page.getByLabel('Cantidad de Harina 000 en kg')).toHaveValue('12')
+  await expect(page.getByRole('region', { name: 'Resumen del pedido' })).toContainText('$14.400')
+  // Ya está cargado: la sugerencia deja de ofrecerse.
+  await expect(sugerido).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Lo de siempre/ })).toHaveCount(0)
 })

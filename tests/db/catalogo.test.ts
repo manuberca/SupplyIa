@@ -288,6 +288,57 @@ describe('nada se borra y cada uno en lo suyo', () => {
   })
 })
 
+describe('comparar proveedores', () => {
+  it('se comparan productos de proveedores distintos, en la misma unidad y del mismo bar', async () => {
+    const uno = await nuevoProveedor(c.adminA, `Quesos Uno ${corrida}`)
+    const dos = await nuevoProveedor(c.adminA, `Quesos Dos ${corrida}`)
+    const azulUno = await nuevoProducto(uno.id, 'Queso Azul x Kg')
+    const azulDos = await nuevoProducto(dos.id, 'Queso Azul La Quesera')
+    const brieUno = await nuevoProducto(uno.id, 'Queso Brie')
+    const hormaDos = await nuevoProducto(dos.id, 'Queso Azul en horma', unidadA)
+    const grupo = randomUUID()
+
+    // El encargado los marca como el mismo producto.
+    const ok = await c.encargadoA
+      .from('productos')
+      .update({ comparable_id: grupo })
+      .in('id', [azulUno.id, azulDos.id])
+    expect(ok.error).toBeNull()
+
+    // Otro producto del mismo proveedor no entra en el grupo…
+    const mismo = await c.encargadoA
+      .from('productos')
+      .update({ comparable_id: grupo })
+      .eq('id', brieUno.id)
+    expect(mismo.error?.message).toMatch(/proveedores distintos/)
+    // …ni uno que se compra en otra unidad.
+    const otraUnidad = await c.encargadoA
+      .from('productos')
+      .update({ comparable_id: grupo })
+      .eq('id', hormaDos.id)
+    expect(otraUnidad.error?.message).toMatch(/misma unidad/)
+
+    // Recepción no arma comparaciones, y otro bar no puede colarse en el grupo.
+    const recepcion = await c.recepcionA
+      .from('productos')
+      .update({ comparable_id: null })
+      .eq('id', azulUno.id)
+      .select()
+    expect(recepcion.data ?? []).toEqual([])
+    const { data: deB } = await c.adminB.from('productos').select('id').limit(1)
+    if (deB?.[0]) {
+      const colado = await c.adminB
+        .from('productos')
+        .update({ comparable_id: grupo })
+        .eq('id', deB[0].id)
+      expect(colado.error?.message).toMatch(/no es de esta organización/)
+    }
+
+    const { data } = await c.adminA.from('productos').select('id').eq('comparable_id', grupo)
+    expect(data?.map((p) => p.id).sort()).toEqual([azulUno.id, azulDos.id].sort())
+  })
+})
+
 describe('importación', () => {
   it('importa proveedores, productos, presentaciones, equivalencias y precios de una vez', async () => {
     const prov = randomUUID()

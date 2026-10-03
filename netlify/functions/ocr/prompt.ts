@@ -292,3 +292,8 @@ export function contextoDelRemito(datos: {
   lineas.push('', 'Leé la imagen del remito y devolvé el JSON con las reglas de arriba.')
   return lineas.join('\n')
 }
+
+/** Boleta larga: ya se leyó una parte y esta lectura sigue desde ahí (src/recepcion/continuar.ts). */
+export function continuacionDelRemito(desde: number, ultimo: string): string {
+  return `CONTINUACIÓN: esta boleta es larga y sus primeros ${desde} renglones YA están leídos, de arriba hacia abajo. El último renglón ya leído es: ${ultimo}. En "items" devolvé SOLO los renglones que están DESPUÉS de ese en la boleta, en orden, hasta el último. No repitas ninguno de los que ya están leídos. Si después de ese no queda ningún renglón, devolvé "items" vacío. El encabezado y los totales, como siempre.`
+}

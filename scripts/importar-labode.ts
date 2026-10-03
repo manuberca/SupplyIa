@@ -322,7 +322,7 @@ const [proveedores, productos] = await Promise.all([
     .eq('org_id', org!.id),
   db
     .from('productos')
-    .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo')
+    .select('id, proveedor_id, nombre, unidad_base_id, umbral_alerta_pct, activo, comparable_id')
     .eq('org_id', org!.id),
 ])
 const catalogo: Catalogo = {

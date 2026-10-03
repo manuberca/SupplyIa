@@ -27,6 +27,8 @@ export type Producto = {
   unidad_base_id: string
   umbral_alerta_pct: number | null
   activo: boolean
+  /** Los productos con el mismo comparable_id son "el mismo" en distintos proveedores. */
+  comparable_id: string | null
 }
 
 export type UltimoPrecio = { producto_id: string; precio_base: number; fecha: string }

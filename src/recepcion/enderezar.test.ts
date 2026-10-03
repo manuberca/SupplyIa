@@ -32,6 +32,7 @@ const lectura = (giro: Lectura['giro'], confianzas: ('alta' | 'media' | 'baja')[
   lineas: confianzas.map((c) => linea(c)),
   validacion: { estado: 'OK', observaciones: [] },
   observaciones: '',
+  incompleta: false,
 })
 
 describe('convieneEnderezar', () => {

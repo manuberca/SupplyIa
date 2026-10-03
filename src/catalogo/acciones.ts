@@ -153,6 +153,44 @@ export function archivarProducto(id: string, archivar: boolean) {
   ])
 }
 
+// ─── Comparar proveedores ──────────────────────────────────────────────────
+
+/**
+ * Marca que dos productos de distintos proveedores son "el mismo". Si alguno ya estaba en un
+ * grupo, el otro se suma a ese grupo (y si los dos tenían, se juntan).
+ */
+export function compararProductos(
+  a: { id: string; comparable_id: string | null },
+  b: { id: string; comparable_id: string | null },
+) {
+  const grupo = b.comparable_id ?? a.comparable_id ?? crypto.randomUUID()
+  const otroGrupo = a.comparable_id && a.comparable_id !== grupo ? a.comparable_id : null
+  return ejecutar('Comparar productos', [
+    ...(otroGrupo
+      ? [
+          () =>
+            supabase
+              .from('productos')
+              .update({ comparable_id: grupo })
+              .eq('comparable_id', otroGrupo),
+        ]
+      : []),
+    () => supabase.from('productos').update({ comparable_id: grupo }).in('id', [a.id, b.id]),
+  ])
+}
+
+/** Saca un producto de su comparación. Si en el grupo queda uno solo, también queda suelto. */
+export function dejarDeComparar(
+  producto: { id: string; comparable_id: string | null },
+  grupo: readonly { id: string }[],
+) {
+  const quedan = grupo.filter((p) => p.id !== producto.id)
+  const sueltos = quedan.length <= 1 ? [producto.id, ...quedan.map((p) => p.id)] : [producto.id]
+  return ejecutar('Dejar de comparar', [
+    () => supabase.from('productos').update({ comparable_id: null }).in('id', sueltos),
+  ])
+}
+
 // ─── Unidades ──────────────────────────────────────────────────────────────
 
 export function crearUnidad(orgId: string, u: { id: string; nombre: string; tipo: TipoUnidad }) {

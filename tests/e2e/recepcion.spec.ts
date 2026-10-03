@@ -135,6 +135,7 @@ test('con la IA: lee el remito, marca el aumento y el faltante, y el pedido qued
     ok: true,
     duplicado: null,
     uso: { usadas: 1, tope: 100 },
+    continuar: null,
     lectura: {
       giro: 0,
       nroRemito: `0003-${corrida}`,
@@ -175,6 +176,7 @@ test('con la IA: lee el remito, marca el aumento y el faltante, y el pedido qued
       ],
       validacion: { estado: 'OK', observaciones: [] },
       observaciones: '',
+      incompleta: false,
     },
   }
   let pedidoAlLector: { proveedorId?: string; tipo?: string } = {}
@@ -345,6 +347,7 @@ test('una foto de costado con lectura dudosa se endereza sola y se lee de nuevo'
     ok: true,
     duplicado: null,
     uso: { usadas: 1, tope: 100 },
+    continuar: null,
     lectura: {
       giro,
       nroRemito: nro,
@@ -360,6 +363,7 @@ test('una foto de costado con lectura dudosa se endereza sola y se lee de nuevo'
       lineas: [linea(confianza, 28400), linea(confianza, 31600)],
       validacion: { estado: 'OK', observaciones: [] },
       observaciones: '',
+      incompleta: false,
     },
   })
   const pedidos: { imagen: string; alternativa?: string }[] = []
@@ -388,6 +392,91 @@ test('una foto de costado con lectura dudosa se endereza sola y se lee de nuevo'
   expect(pedidos[1]!.imagen).not.toBe(pedidos[0]!.imagen)
   expect(pedidos[1]!.alternativa).not.toBe(pedidos[1]!.imagen)
   await expect(page.getByLabel('Total de la boleta')).toHaveValue('60.000')
+})
+
+test('una boleta larga se lee en partes sin que la persona haga nada; si el resto falla, avisa', async ({
+  page,
+}) => {
+  const linea = (texto: string, productoId: string, subtotal: number) => ({
+    texto,
+    productoId,
+    cantidad: 2,
+    unidad: 'kg',
+    precioUnit: subtotal / 2,
+    descuentoLinea: null,
+    subtotal,
+    confianza: 'alta' as const,
+    observacion: '',
+    esPromo: false,
+  })
+  const parte = (
+    lineas: ReturnType<typeof linea>[],
+    continuar: { leidos: number; pase: string } | null,
+  ): RespuestaLectura => ({
+    ok: true,
+    duplicado: null,
+    uso: { usadas: 1, tope: 100 },
+    continuar,
+    lectura: {
+      giro: 0,
+      nroRemito: `0010-${corrida}`,
+      fecha: null,
+      proveedorDetectado: null,
+      totales: {
+        subtotalNeto: null,
+        descuentoGlobal: null,
+        iva: null,
+        percepciones: null,
+        total: 90000,
+      },
+      lineas,
+      validacion: { estado: 'OK', observaciones: [] },
+      observaciones: '',
+      incompleta: false,
+    },
+  })
+  const primera = parte(
+    [linea('VACIO X KG', ids.vacio, 28400), linea('MATAMBRE X KG', ids.matambre, 31600)],
+    { leidos: 2, pase: 'pase-de-prueba' },
+  )
+  let fallaElResto = false
+  const pedidos: { continuar?: string }[] = []
+  await page.route('**/api/ocr', async (route) => {
+    const pedido = JSON.parse(route.request().postData() ?? '{}') as { continuar?: string }
+    pedidos.push(pedido)
+    if (!pedido.continuar) return route.fulfill({ json: primera })
+    if (fallaElResto) {
+      return route.fulfill({ json: { ok: false, error: 'El lector está sobrecargado.' } })
+    }
+    // La continuación repite el renglón de la costura: no tiene que quedar duplicado.
+    await route.fulfill({
+      json: parte(
+        [linea('MATAMBRE X KG', ids.matambre, 31600), linea('ENTRAÑA X KG', ids.entrana, 30000)],
+        null,
+      ),
+    })
+  })
+
+  await entrarComoRecepcion(page)
+  await page.goto(`/recibir/proveedor/${ids.proveedor}`)
+  await expect(page.getByRole('button', { name: 'Sacá la foto del remito' })).toBeVisible()
+  await page.getByLabel('Foto del remito').setInputFiles(await foto(page))
+
+  // Las dos partes juntas dan el total de la boleta: 28.400 + 31.600 + 30.000.
+  await expect(page.getByText(`Remito 0010-${corrida}`)).toBeVisible()
+  await expect(page.getByText('Leído con IA · cuentas verificadas')).toBeVisible()
+  await expect(page.getByText(/no se llegó a leer entera/)).toHaveCount(0)
+  expect(pedidos.map((p) => p.continuar)).toEqual([undefined, 'pase-de-prueba'])
+
+  // Otra vez, pero el resto no se puede leer: queda lo leído y avisa que faltan renglones.
+  fallaElResto = true
+  await page.goto(`/recibir/proveedor/${ids.proveedor}`)
+  await expect(page.getByRole('button', { name: 'Sacá la foto del remito' })).toBeVisible()
+  await page.getByLabel('Foto del remito').setInputFiles(await foto(page))
+  await expect(
+    page.getByText('no se llegó a leer entera: se leyeron los primeros 2 renglones'),
+  ).toBeVisible()
+  await expect(page.getByText('Leído con IA · cuentas verificadas')).toHaveCount(0)
 })
 
 test('una recepción ya confirmada se corrige desde el pedido, y el pedido se puede repetir', async ({

@@ -5,22 +5,26 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { limpiarSecreto } from '../../../src/lib/secreto'
 import { z } from 'zod'
+import { rescatarParcial } from '../../../src/recepcion/continuar'
 import { salidaModeloSchema, type SalidaModelo } from '../../../src/recepcion/lectura'
-import { contextoDelRemito, SISTEMA } from './prompt'
+import { contextoDelRemito, continuacionDelRemito, SISTEMA } from './prompt'
 
 // Sonnet 5.5, medido el 30/9 con 12 remitos armados de boletas reales de La Bodeguita
 // (npm run remitos:armar / remitos:probar), mismo prompt y esfuerzo bajo:
 //   Opus 5.5    7 de 12 a tiempo (5 cortados a los 24 s) · 92,3 % de campos bien
 //   Sonnet 5.5  12 de 12 · 3,3 a 7,9 s · 96,9 % · la mitad de precio
-// Netlify corta cerca de los 26 s, así que la velocidad manda. No cambiarlo sin volver a medir.
-// Todo se cambia con variables de entorno, sin redeployar.
+// La velocidad manda: la IA escribe los renglones de a uno (unos 0,7 s cada uno) y Netlify corta
+// la función a los 60 s. No cambiar el modelo sin volver a medir.
+// Todo se cambia con variables de entorno.
 const ESFUERZOS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 type Esfuerzo = (typeof ESFUERZOS)[number]
 
 export const configuracion = () => ({
   modelo: process.env.OCR_MODEL || 'claude-sonnet-5-5',
   esfuerzo: ESFUERZOS.find((e) => e === process.env.OCR_EFFORT) ?? ('low' as Esfuerzo),
-  plazoMs: Number(process.env.OCR_DEADLINE_MS || 24_000), // Netlify corta a ~26 s: 2 s de margen
+  // Netlify corta a los 60 s. A los 45 s se corta la lectura y se sigue en otro pedido con lo que
+  // falte (boletas largas): quedan 15 s para la sesión, el catálogo y responder.
+  corteMs: Number(process.env.OCR_DEADLINE_MS || 45_000),
 })
 
 // Salida estructurada: el JSON que devuelve el modelo siempre respeta este esquema.
@@ -72,10 +76,15 @@ const DOS_VERSIONES = `ATENCIÓN: te mando DOS imágenes. Son la MISMA boleta, g
 
 export type Leido = {
   salida: SalidaModelo
+  /** false: se cortó por tiempo (o por largo) y quedan renglones sin leer. */
+  completa: boolean
   modelo: string
   ms: number
-  uso: Anthropic.Beta.BetaUsage
+  uso: Anthropic.Beta.BetaUsage | null
 }
+
+const TARDO =
+  'La lectura tardó demasiado. Probá con una foto más nítida y recortada, o cargá el remito a mano.'
 
 export async function leerConIA(datos: {
   imagen: string
@@ -83,21 +92,33 @@ export async function leerConIA(datos: {
   alternativa?: string
   tipo: 'image/jpeg' | 'image/png' | 'image/webp'
   contexto: string
+  /** Boleta larga: ya se leyeron `desde` renglones y esta lectura sigue después de `ultimo`. */
+  continuar?: { desde: number; ultimo: string }
+  /** Cuánto puede tardar esta lectura antes de cortarla y quedarse con lo que haya. */
+  corteMs?: number
   modelo?: string
   esfuerzo?: Esfuerzo
 }): Promise<Leido> {
   const config = configuracion()
   const modelo = datos.modelo ?? config.modelo
   const esfuerzo = datos.esfuerzo ?? config.esfuerzo
+  const corteMs = datos.corteMs ?? config.corteMs
   const inicio = Date.now()
   const cliente = new Anthropic({
     apiKey: limpiarSecreto('ANTHROPIC_API_KEY', process.env.ANTHROPIC_API_KEY).valor,
-    timeout: config.plazoMs,
     maxRetries: 0,
   })
+  const pedido = [
+    ...(datos.alternativa ? [DOS_VERSIONES] : []),
+    datos.contexto,
+    ...(datos.continuar
+      ? [continuacionDelRemito(datos.continuar.desde, datos.continuar.ultimo)]
+      : []),
+  ].join('\n\n')
 
-  const pedir = (restante: number) =>
-    cliente.beta.messages.create(
+  // En streaming: si se acaba el tiempo, lo que ya escribió no se pierde.
+  const pedir = async (restante: number) => {
+    const stream = cliente.beta.messages.stream(
       {
         model: modelo,
         max_tokens: 16_000,
@@ -120,20 +141,41 @@ export async function leerConIA(datos: {
                 type: 'image' as const,
                 source: { type: 'base64' as const, media_type: datos.tipo, data },
               })),
-              {
-                type: 'text',
-                text: datos.alternativa ? `${DOS_VERSIONES}\n\n${datos.contexto}` : datos.contexto,
-              },
+              { type: 'text', text: pedido },
             ],
           },
         ],
       },
-      { timeout: restante },
+      { timeout: restante + 10_000 },
     )
+    let texto = ''
+    stream.on('streamEvent', (evento) => {
+      // Si otro modelo retoma la lectura (fallback), lo escrito hasta ahí no vale.
+      if (evento.type === 'content_block_start' && evento.content_block.type === 'fallback') {
+        texto = ''
+      } else if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') {
+        texto += evento.delta.text
+      }
+    })
+    let cortada = false
+    const reloj = setTimeout(() => {
+      cortada = true
+      stream.abort()
+    }, restante)
+    try {
+      const mensaje = await stream.finalMessage()
+      return { mensaje, texto }
+    } catch (error) {
+      if (!cortada) throw error
+      return { mensaje: null, texto, uso: stream.currentMessage?.usage ?? null }
+    } finally {
+      clearTimeout(reloj)
+    }
+  }
 
   let respuesta
   try {
-    respuesta = await pedir(config.plazoMs)
+    respuesta = await pedir(corteMs)
   } catch (error) {
     // Saturada al instante: un reintento, solo si queda tiempo de sobra.
     const pasajero =
@@ -143,27 +185,35 @@ export async function leerConIA(datos: {
         error.status >= 500)
     if (!pasajero || Date.now() - inicio > 6000) throw error
     await new Promise((r) => setTimeout(r, 900))
-    respuesta = await pedir(config.plazoMs - (Date.now() - inicio))
+    respuesta = await pedir(corteMs - (Date.now() - inicio))
   }
 
-  if (respuesta.stop_reason === 'refusal') {
+  const { mensaje, texto } = respuesta
+  if (mensaje?.stop_reason === 'refusal') {
     throw new ErrorDeLectura(
       'El lector no pudo leer esta foto. Sacala de nuevo (solo el remito, sin nada más) o cargala a mano.',
     )
   }
-  if (respuesta.stop_reason === 'max_tokens') {
-    throw new ErrorDeLectura(
-      'El remito tiene demasiados renglones para leerlo de una vez. Cargalo a mano.',
-    )
+  // Se acabó el tiempo (o el largo de la respuesta): valen los renglones que salieron enteros.
+  if (!mensaje || mensaje.stop_reason === 'max_tokens') {
+    const salida = rescatarParcial(texto)
+    if (!salida) throw new ErrorDeLectura(TARDO)
+    return {
+      salida,
+      completa: false,
+      modelo: mensaje?.model ?? modelo,
+      ms: Date.now() - inicio,
+      uso: mensaje?.usage ?? respuesta.uso ?? null,
+    }
   }
-  const texto = respuesta.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('')
   const salida = salidaModeloSchema.safeParse(JSON.parse(texto))
   if (!salida.success) throw new Error(`Salida del modelo inválida: ${salida.error.message}`)
   return {
     salida: salida.data,
-    modelo: respuesta.model,
+    completa: true,
+    modelo: mensaje.model,
     ms: Date.now() - inicio,
-    uso: respuesta.usage,
+    uso: mensaje.usage,
   }
 }
 
