@@ -150,9 +150,11 @@ test('resumen, Excel con los mismos números, diferencia reclamada y pagos', asy
   await page.getByLabel('Contraseña').fill(clave)
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
 
-  // Desde Ajustes al panel, y filtrado por el proveedor de la prueba
-  await page.getByRole('link', { name: /abrir ajustes/ }).click()
-  await page.getByRole('link', { name: 'Panel de administración' }).click()
+  // Desde el menú de la computadora al panel, y filtrado por el proveedor de la prueba
+  await page
+    .getByRole('navigation', { name: 'Secciones' })
+    .getByRole('link', { name: 'Administración' })
+    .click()
   await expect(page.getByRole('heading', { name: 'Resumen de compras' })).toBeVisible()
   await page.getByLabel('Proveedor').selectOption({ label: nombreProveedor })
 

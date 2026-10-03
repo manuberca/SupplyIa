@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { ClipboardList, ScanLine, TrendingUp } from 'lucide-react'
 import { EsperarCatalogo } from '../catalogo/EsperarCatalogo'
+import { PrimerosPasos } from '../inicio/PrimerosPasos'
 import { useCatalogo } from '../catalogo/contexto'
 import { useControl } from '../control/contexto'
 import { porcentaje } from '../lib/formato'
@@ -60,6 +61,8 @@ export function Inicio() {
           </div>
         </Link>
       </div>
+
+      <PrimerosPasos />
 
       <AlertaAumentos />
 

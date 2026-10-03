@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   Camera,
@@ -103,6 +103,14 @@ function Recepcion({
   const [guardando, setGuardando] = useState(false)
   const [recibidoAt] = useState(() => new Date().toISOString())
   const entrada = useRef<HTMLInputElement>(null)
+  // La foto, para verla al lado de los renglones (en computadora).
+  const urlFoto = useMemo(() => (foto ? URL.createObjectURL(foto.blob) : null), [foto])
+  useEffect(
+    () => () => {
+      if (urlFoto) URL.revokeObjectURL(urlFoto)
+    },
+    [urlFoto],
+  )
 
   // Los productos de este proveedor, con su último precio antes de esta recepción.
   const productos = useMemo(() => {
@@ -518,235 +526,253 @@ function Recepcion({
     <>
       <TituloPantalla titulo="Recepción" subtitulo={subtitulo} />
 
-      <section className="remito">
-        <span className="remito__icono" aria-hidden="true">
-          <FileText size={26} />
-        </span>
-        <div>
-          <div className="remito__sello">
-            {origen === 'ia' ? (
-              <>
-                <Sparkles size={14} aria-hidden="true" /> Leído con IA ·{' '}
-                {cuentasOk && cuentas.estado === 'ok'
-                  ? 'cuentas verificadas'
-                  : 'revisá las cuentas'}
-              </>
-            ) : (
-              <>
-                <PencilLine size={14} aria-hidden="true" /> Cargado a mano
-              </>
-            )}
-          </div>
-          <p className="remito__numero">
-            {nroRemito ? `Remito ${nroRemito}` : 'Remito sin número'}
-          </p>
-          <div className="remito__detalle">
-            Llegó {hora(recibidoAt)}
-            {pedido ? ` · pedido ${hace(pedido.creado_at)}` : ''}
-          </div>
-        </div>
-      </section>
-
-      {duplicado && (
-        <p className="aviso aviso--atencion" role="alert">
-          <TriangleAlert size={16} aria-hidden="true" /> <strong>Ojo:</strong> ya cargaste un remito
-          con este número de {proveedor.nombre} ({hace(duplicado)}). Fijate que no sea el mismo.
-        </p>
-      )}
-      {validacionRenglones && validacionRenglones.observaciones.length > 0 && (
-        <p className={`aviso ${cuentasOk ? 'aviso--info' : 'aviso--atencion'}`}>
-          {validacionRenglones.observaciones.join(' ')}
-        </p>
-      )}
-      {lectura?.observaciones && (
-        <p className="aviso aviso--info">La IA anotó: {lectura.observaciones}</p>
-      )}
-
-      <div className="chips" aria-label="Resumen">
-        {resumen.correctos > 0 && (
-          <span className="pastilla pastilla--ok">
-            {resumen.correctos} {resumen.correctos === 1 ? 'correcto' : 'correctos'}
-          </span>
-        )}
-        {resumen.faltantes > 0 && (
-          <span className="pastilla pastilla--error">{resumen.faltantes} con faltante</span>
-        )}
-        {resumen.aumentos > 0 && (
-          <span className="pastilla pastilla--atencion">
-            {resumen.aumentos} {resumen.aumentos === 1 ? 'subió' : 'subieron'} de precio
-          </span>
-        )}
-        {resumen.excesos > 0 && (
-          <span className="pastilla pastilla--atencion">{resumen.excesos} de más</span>
-        )}
-        {resumen.noPedidos > 0 && (
-          <span className="pastilla pastilla--atencion">{resumen.noPedidos} sin pedir</span>
-        )}
-        {resumen.sinAsignar > 0 && (
-          <span className="pastilla pastilla--error">{resumen.sinAsignar} sin asignar</span>
-        )}
-      </div>
-
-      <section className="lista" aria-label="Renglones del remito">
-        <div className="tabla-recepcion__encabezado" aria-hidden="true">
-          <span>Producto</span>
-          <span className="tabla-recepcion__numero">Pedido</span>
-          <span className="tabla-recepcion__numero">Llegó</span>
-          <span className="tabla-recepcion__numero">$/u</span>
-        </div>
-        {filas.length === 0 && (
-          <p className="lista__vacia">Agregá lo que llegó con el botón de abajo.</p>
-        )}
-        {filas.map((f) => {
-          const clave = f.productoId ? `p:${f.productoId}` : `r:${f.renglonId}`
-          const abierto = editando === clave
-          return (
-            <div key={clave}>
-              <button
-                className="tabla-recepcion__renglon"
-                data-resultado={f.productoId ? f.resultado : 'sin_asignar'}
-                aria-expanded={abierto}
-                onClick={() => setEditando(abierto ? null : clave)}
-              >
-                <span className="tabla-recepcion__fila">
-                  <span className="lista__titulo">{f.nombre}</span>
-                  <span className="tabla-recepcion__numero">
-                    {f.pedidoBase !== null ? numero(f.pedidoBase, 3) : '—'}
-                  </span>
-                  <span className="tabla-recepcion__numero">
-                    {f.llegoBase !== null ? numero(f.llegoBase, 3) : '—'}
-                  </span>
-                  <span className="tabla-recepcion__numero">
-                    {f.precioBase !== null ? numero(Math.round(f.precioBase), 0) : '—'}
-                  </span>
-                </span>
-                <span className="tabla-recepcion__detalle">{f.detalle}</span>
-                {f.productoId && f.textos.length > 0 && (
-                  <span className="tabla-recepcion__texto-remito">
-                    En el remito: {f.textos.join(' / ')}
-                  </span>
-                )}
-              </button>
-              {abierto &&
-                (f.productoId ? (
-                  <EditorFila
-                    fila={f}
-                    onGuardar={(llego, precio) => guardarFila(f, llego, precio)}
-                    onCancelar={() => setEditando(null)}
-                  />
+      {/* En computadora: los renglones a la izquierda; la foto, la boleta y confirmar a la derecha. */}
+      <div className="dos-columnas">
+        <div className="dos-columnas__principal">
+          <section className="remito">
+            <span className="remito__icono" aria-hidden="true">
+              <FileText size={26} />
+            </span>
+            <div>
+              <div className="remito__sello">
+                {origen === 'ia' ? (
+                  <>
+                    <Sparkles size={14} aria-hidden="true" /> Leído con IA ·{' '}
+                    {cuentasOk && cuentas.estado === 'ok'
+                      ? 'cuentas verificadas'
+                      : 'revisá las cuentas'}
+                  </>
                 ) : (
-                  <AsignarRenglon
-                    productos={[...productos.values()]}
-                    onAsignar={(pid) => asignar(clave.slice(2), pid)}
-                    onQuitar={() => quitar(clave.slice(2))}
-                  />
-                ))}
-            </div>
-          )
-        })}
-      </section>
-
-      {sinProducto.length > 0 && (
-        <label className="campo">
-          <span className="campo__etiqueta">¿Llegó algo más?</span>
-          <select value="" onChange={(e) => e.target.value && agregarProducto(e.target.value)}>
-            <option value="">Agregar un producto…</option>
-            {sinProducto.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
-      <section className="card formulario" aria-label="Boleta">
-        <div className="lista__titulo">Boleta</div>
-        <div className="boleta-campos">
-          <label className="campo">
-            <span className="campo__etiqueta">Número de boleta o remito</span>
-            <input
-              className="mono"
-              value={nroRemito}
-              onChange={(e) => setNroRemito(e.target.value)}
-              placeholder="0001-00012345"
-            />
-          </label>
-          <label className="campo">
-            <span className="campo__etiqueta">Total de la boleta</span>
-            <input
-              className="mono"
-              inputMode="decimal"
-              value={totalBoleta}
-              onChange={(e) => setTotalBoleta(e.target.value)}
-              placeholder="$ total"
-              aria-invalid={totalBoleta.trim() !== '' && total === null}
-            />
-          </label>
-        </div>
-        <div className="totales-recepcion">
-          <div>
-            <div className="lista__detalle">Suma de los renglones</div>
-            {conciliacion.totalPedidoEstimado !== null && (
-              <div className="lista__detalle">
-                Pediste por {pesos(conciliacion.totalPedidoEstimado)}
+                  <>
+                    <PencilLine size={14} aria-hidden="true" /> Cargado a mano
+                  </>
+                )}
               </div>
+              <p className="remito__numero">
+                {nroRemito ? `Remito ${nroRemito}` : 'Remito sin número'}
+              </p>
+              <div className="remito__detalle">
+                Llegó {hora(recibidoAt)}
+                {pedido ? ` · pedido ${hace(pedido.creado_at)}` : ''}
+              </div>
+            </div>
+          </section>
+
+          {duplicado && (
+            <p className="aviso aviso--atencion" role="alert">
+              <TriangleAlert size={16} aria-hidden="true" /> <strong>Ojo:</strong> ya cargaste un
+              remito con este número de {proveedor.nombre} ({hace(duplicado)}). Fijate que no sea el
+              mismo.
+            </p>
+          )}
+          {validacionRenglones && validacionRenglones.observaciones.length > 0 && (
+            <p className={`aviso ${cuentasOk ? 'aviso--info' : 'aviso--atencion'}`}>
+              {validacionRenglones.observaciones.join(' ')}
+            </p>
+          )}
+          {lectura?.observaciones && (
+            <p className="aviso aviso--info">La IA anotó: {lectura.observaciones}</p>
+          )}
+
+          <div className="chips" aria-label="Resumen">
+            {resumen.correctos > 0 && (
+              <span className="pastilla pastilla--ok">
+                {resumen.correctos} {resumen.correctos === 1 ? 'correcto' : 'correctos'}
+              </span>
+            )}
+            {resumen.faltantes > 0 && (
+              <span className="pastilla pastilla--error">{resumen.faltantes} con faltante</span>
+            )}
+            {resumen.aumentos > 0 && (
+              <span className="pastilla pastilla--atencion">
+                {resumen.aumentos} {resumen.aumentos === 1 ? 'subió' : 'subieron'} de precio
+              </span>
+            )}
+            {resumen.excesos > 0 && (
+              <span className="pastilla pastilla--atencion">{resumen.excesos} de más</span>
+            )}
+            {resumen.noPedidos > 0 && (
+              <span className="pastilla pastilla--atencion">{resumen.noPedidos} sin pedir</span>
+            )}
+            {resumen.sinAsignar > 0 && (
+              <span className="pastilla pastilla--error">{resumen.sinAsignar} sin asignar</span>
             )}
           </div>
-          <div className="totales-recepcion__total">{pesos(cuentas.suma)}</div>
+
+          <section className="lista" aria-label="Renglones del remito">
+            <div className="tabla-recepcion__encabezado" aria-hidden="true">
+              <span>Producto</span>
+              <span className="tabla-recepcion__numero">Pedido</span>
+              <span className="tabla-recepcion__numero">Llegó</span>
+              <span className="tabla-recepcion__numero">$/u</span>
+            </div>
+            {filas.length === 0 && (
+              <p className="lista__vacia">Agregá lo que llegó con el botón de abajo.</p>
+            )}
+            {filas.map((f) => {
+              const clave = f.productoId ? `p:${f.productoId}` : `r:${f.renglonId}`
+              const abierto = editando === clave
+              return (
+                <div key={clave}>
+                  <button
+                    className="tabla-recepcion__renglon"
+                    data-resultado={f.productoId ? f.resultado : 'sin_asignar'}
+                    aria-expanded={abierto}
+                    onClick={() => setEditando(abierto ? null : clave)}
+                  >
+                    <span className="tabla-recepcion__fila">
+                      <span className="lista__titulo">{f.nombre}</span>
+                      <span className="tabla-recepcion__numero">
+                        {f.pedidoBase !== null ? numero(f.pedidoBase, 3) : '—'}
+                      </span>
+                      <span className="tabla-recepcion__numero">
+                        {f.llegoBase !== null ? numero(f.llegoBase, 3) : '—'}
+                      </span>
+                      <span className="tabla-recepcion__numero">
+                        {f.precioBase !== null ? numero(Math.round(f.precioBase), 0) : '—'}
+                      </span>
+                    </span>
+                    <span className="tabla-recepcion__detalle">{f.detalle}</span>
+                    {f.productoId && f.textos.length > 0 && (
+                      <span className="tabla-recepcion__texto-remito">
+                        En el remito: {f.textos.join(' / ')}
+                      </span>
+                    )}
+                  </button>
+                  {abierto &&
+                    (f.productoId ? (
+                      <EditorFila
+                        fila={f}
+                        onGuardar={(llego, precio) => guardarFila(f, llego, precio)}
+                        onCancelar={() => setEditando(null)}
+                      />
+                    ) : (
+                      <AsignarRenglon
+                        productos={[...productos.values()]}
+                        onAsignar={(pid) => asignar(clave.slice(2), pid)}
+                        onQuitar={() => quitar(clave.slice(2))}
+                      />
+                    ))}
+                </div>
+              )
+            })}
+          </section>
+
+          {sinProducto.length > 0 && (
+            <label className="campo">
+              <span className="campo__etiqueta">¿Llegó algo más?</span>
+              <select value="" onChange={(e) => e.target.value && agregarProducto(e.target.value)}>
+                <option value="">Agregar un producto…</option>
+                {sinProducto.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
-        {totalBoleta.trim() !== '' && total === null && (
-          <p className="campo__ayuda campo__ayuda--error">
-            El total tiene que ser un número, por ejemplo 12.500,50.
-          </p>
-        )}
-        {cuentas.alertas.length > 0 && (
-          <p className="aviso aviso--atencion" role="status">
-            <TriangleAlert size={16} aria-hidden="true" /> {cuentas.alertas.join(' ')}
-            {pedido && ' El pedido va a quedar para revisar antes de pagar.'}
-          </p>
-        )}
-        {cuentas.nota && <p className="aviso aviso--ok">{cuentas.nota}</p>}
-        {cuentas.sinPrecio > 0 && (
-          <p className="aviso aviso--atencion">
-            {cuentas.sinPrecio === 1
-              ? '1 producto sin precio.'
-              : `${cuentas.sinPrecio} productos sin precio.`}{' '}
-            Cargarlos es lo que permite detectar si un proveedor te aumenta.
-          </p>
-        )}
-      </section>
+        <aside className="dos-columnas__lateral">
+          {urlFoto && (
+            <a
+              className="foto-remito solo-escritorio"
+              href={urlFoto}
+              target="_blank"
+              rel="noreferrer"
+              title="Abrir la foto en grande"
+            >
+              <img src={urlFoto} alt="Foto del remito" />
+            </a>
+          )}
+          <section className="card formulario" aria-label="Boleta">
+            <div className="lista__titulo">Boleta</div>
+            <div className="boleta-campos">
+              <label className="campo">
+                <span className="campo__etiqueta">Número de boleta o remito</span>
+                <input
+                  className="mono"
+                  value={nroRemito}
+                  onChange={(e) => setNroRemito(e.target.value)}
+                  placeholder="0001-00012345"
+                />
+              </label>
+              <label className="campo">
+                <span className="campo__etiqueta">Total de la boleta</span>
+                <input
+                  className="mono"
+                  inputMode="decimal"
+                  value={totalBoleta}
+                  onChange={(e) => setTotalBoleta(e.target.value)}
+                  placeholder="$ total"
+                  aria-invalid={totalBoleta.trim() !== '' && total === null}
+                />
+              </label>
+            </div>
+            <div className="totales-recepcion">
+              <div>
+                <div className="lista__detalle">Suma de los renglones</div>
+                {conciliacion.totalPedidoEstimado !== null && (
+                  <div className="lista__detalle">
+                    Pediste por {pesos(conciliacion.totalPedidoEstimado)}
+                  </div>
+                )}
+              </div>
+              <div className="totales-recepcion__total">{pesos(cuentas.suma)}</div>
+            </div>
+            {totalBoleta.trim() !== '' && total === null && (
+              <p className="campo__ayuda campo__ayuda--error">
+                El total tiene que ser un número, por ejemplo 12.500,50.
+              </p>
+            )}
+            {cuentas.alertas.length > 0 && (
+              <p className="aviso aviso--atencion" role="status">
+                <TriangleAlert size={16} aria-hidden="true" /> {cuentas.alertas.join(' ')}
+                {pedido && ' El pedido va a quedar para revisar antes de pagar.'}
+              </p>
+            )}
+            {cuentas.nota && <p className="aviso aviso--ok">{cuentas.nota}</p>}
+            {cuentas.sinPrecio > 0 && (
+              <p className="aviso aviso--atencion">
+                {cuentas.sinPrecio === 1
+                  ? '1 producto sin precio.'
+                  : `${cuentas.sinPrecio} productos sin precio.`}{' '}
+                Cargarlos es lo que permite detectar si un proveedor te aumenta.
+              </p>
+            )}
+          </section>
 
-      {error && (
-        <p className="aviso aviso--error" role="alert">
-          {error}
-        </p>
-      )}
+          {error && (
+            <p className="aviso aviso--error" role="alert">
+              {error}
+            </p>
+          )}
 
-      <div className="acciones">
-        {diferencias.length > 0 && (
-          <a
-            className="boton boton--secundario"
-            href={enlaceWhatsapp(proveedor.whatsapp, reclamo)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <MessageCircle size={18} aria-hidden="true" />
-            Reclamar por WhatsApp
-          </a>
-        )}
-        <button
-          className="boton boton--primario"
-          onClick={confirmar}
-          disabled={guardando || filas.length === 0}
-        >
-          {guardando ? 'Guardando…' : 'Confirmar'}
-        </button>
-        {origen === 'ia' && (
-          <button className="boton boton--texto" onClick={cargarAMano}>
-            La lectura está mal: cargar a mano
-          </button>
-        )}
+          <div className="acciones">
+            {diferencias.length > 0 && (
+              <a
+                className="boton boton--secundario"
+                href={enlaceWhatsapp(proveedor.whatsapp, reclamo)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircle size={18} aria-hidden="true" />
+                Reclamar por WhatsApp
+              </a>
+            )}
+            <button
+              className="boton boton--primario"
+              onClick={confirmar}
+              disabled={guardando || filas.length === 0}
+            >
+              {guardando ? 'Guardando…' : 'Confirmar'}
+            </button>
+            {origen === 'ia' && (
+              <button className="boton boton--texto" onClick={cargarAMano}>
+                La lectura está mal: cargar a mano
+              </button>
+            )}
+          </div>
+        </aside>
       </div>
     </>
   )

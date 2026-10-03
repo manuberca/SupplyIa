@@ -423,6 +423,17 @@ enabled = true
 # ─── Producción (supplyia-prod) ─────────────────────────────────────────────
 # Lo de arriba vale para dev. Acá solo va lo que cambia en prod.
 # Aplicar con: npx supabase config push --project-ref xrdujgrbmjgtcwxrkqer
+# Desarrollo: los tests de flujo entran muchas veces seguidas desde la misma conexión.
+# Producción queda con el límite normal (30 cada 5 minutos).
+[remotes.dev]
+project_id = "efyulrowgyrxqubjelor"
+
+[remotes.dev.auth.rate_limit]
+sign_in_sign_ups = 300
+# Entrar con contraseña pasa por /token: es este el que frena a los tests (colchón de 30 y,
+# por defecto, se repone medio inicio de sesión por segundo).
+token_refresh = 1500
+
 [remotes.prod]
 project_id = "xrdujgrbmjgtcwxrkqer"
 

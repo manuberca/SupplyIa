@@ -32,8 +32,8 @@ test('administración entra con contraseña y ve todas las secciones', async ({ 
 
   await page.getByRole('link', { name: /abrir ajustes/ }).click()
   await expect(page.getByRole('heading', { name: 'Ajustes' })).toBeVisible()
-  await expect(page.getByText('Bar Prueba A')).toBeVisible()
-  await expect(page.getByText('Administración', { exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByText('Bar Prueba A')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Administración', { exact: true })).toBeVisible()
   // Bar Prueba A tiene dos locales: aparece el selector.
   await expect(page.getByLabel('Local en el que estás')).toBeVisible()
 })
@@ -59,8 +59,8 @@ test('cada organización ve solo lo suyo', async ({ page }) => {
   await entrar(page, usuario('adminB').email)
 
   await page.getByRole('link', { name: /abrir ajustes/ }).click()
-  await expect(page.getByText('Bar Prueba B')).toBeVisible()
-  await expect(page.getByText('Bar Prueba A')).toHaveCount(0)
+  await expect(page.getByRole('main').getByText('Bar Prueba B')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Bar Prueba A')).toHaveCount(0)
   // Bar Prueba B tiene un solo local: no hay selector.
   await expect(page.getByLabel('Local en el que estás')).toHaveCount(0)
 })

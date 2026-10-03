@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { LayoutDashboard, LogOut } from 'lucide-react'
+import { LayoutDashboard, LogOut, Smartphone } from 'lucide-react'
 import { NOMBRE_ROL, puede } from '../lib/permisos'
 import { useSesion, useSesionLista } from '../sesion/contexto'
 import { CambiarClave } from './ajustes/CambiarClave'
@@ -74,6 +74,10 @@ export function Ajustes() {
           </div>
         </dl>
         <CambiarClave />
+        <Link to="/instalar" className="boton boton--secundario">
+          <Smartphone size={18} aria-hidden="true" />
+          Instalar la app
+        </Link>
         <button className="boton boton--secundario" onClick={cerrarSesion} disabled={saliendo}>
           <LogOut size={18} aria-hidden="true" />
           {saliendo ? 'Saliendo…' : 'Cerrar sesión'}

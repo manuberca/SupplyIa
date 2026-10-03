@@ -133,6 +133,16 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [ ] SMTP con Resend + dominio propio: queda para cuando se venda (hoy "mandame un mail" solo le llega a Manu). No traba el piloto.
 - [ ] Alta de los dos bares del piloto con `cliente:alta --prod` (Manu todavía no definió cuáles).
 
+## Modo computadora, instalación y primeros pasos (hecho en local, 3/10)
+
+- [x] **Dos modos según el ancho de la pantalla** (sin botón: lo decide solo, desde 1000 px). El celular queda igual. En computadora: menú a la izquierda (con Pedidos, Administración y Ajustes, que en el celular están en otro lado), una columna cómoda de 760 px y dos columnas donde rinde: **Nuevo pedido** (productos | el pedido siempre a la vista) y **Recepción** (renglones | foto del remito, boleta y confirmar). Es el mismo componente de navegación y el mismo HTML: solo cambia el CSS (`.dos-columnas` no existe en el celular).
+- [x] **Instalá la app** (`/instalar`, desde Ajustes): pasos para iPhone, Android y computadora, destacando los de ese dispositivo; botón "Instalar" cuando el navegador lo permite; avisa si ya está instalada.
+- [x] **Primeros pasos** en Inicio para un bar nuevo: catálogo → equipo → primer pedido → primera recepción → instalar, con tildes; a cada rol le aparece lo que puede hacer; desaparece al completarse o con "No mostrar más".
+- [x] Tests e2e estables: Supabase limita los inicios de sesión por conexión (entrar con contraseña cuenta contra `/token`: colchón de 30 y medio por segundo). En **dev** se subió (`[remotes.dev]` en `supabase/config.toml`); prod queda con el límite normal.
+- [x] Tests: `npm test` 215, `npm run test:db` 70, `npm run e2e` 24 (3 nuevos a tamaño de computadora).
+- [ ] Deploy (sin migración) y `npm run prod:probar`.
+- [ ] Siguiente: dominio propio (lo compra Manu) → dirección en Netlify + mails con Resend.
+
 ## Datos en dev
 
 - Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano. Los tests dejan locales archivados y dos miembros dados de baja (`invitado-a`, `invitado-e2e`): es esperable.

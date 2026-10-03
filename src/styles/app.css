@@ -1848,3 +1848,264 @@ a.boton {
   letter-spacing: 0.02em;
   user-select: all;
 }
+
+/* ─── Modo computadora: en pantallas anchas, menú a la izquierda y más lugar ─────────────
+   El celular queda igual. El modo lo decide el ancho de la pantalla (no hay que elegir nada). */
+
+.barra__marca,
+.barra__pie,
+.barra__item--escritorio,
+.solo-escritorio {
+  display: none;
+}
+
+/* Dos columnas en computadora; en el celular no existe (sus hijos van uno abajo del otro). */
+.dos-columnas,
+.dos-columnas__principal,
+.dos-columnas__lateral {
+  display: contents;
+}
+
+@media (min-width: 1000px) {
+  .app {
+    max-width: none;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .barra {
+    order: -1;
+    position: sticky;
+    top: 0;
+    left: auto;
+    transform: none;
+    width: 240px;
+    max-width: none;
+    height: 100dvh;
+    flex-shrink: 0;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 2px;
+    padding: 28px 18px 18px;
+    background: var(--tinta);
+    border-top: none;
+  }
+
+  .barra__marca {
+    display: block;
+    margin-bottom: 26px;
+  }
+
+  .barra__marca .marca {
+    color: var(--card);
+  }
+
+  .barra__item,
+  .barra__item--escritorio {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: color-mix(in srgb, var(--card) 78%, var(--tinta));
+    font-size: 14px;
+  }
+
+  .barra__item:hover {
+    color: var(--card);
+  }
+
+  .barra__item[aria-current='page'] {
+    background: color-mix(in srgb, var(--card) 10%, var(--tinta));
+    color: var(--card);
+  }
+
+  .barra__item:focus-visible {
+    outline: 2px solid var(--petroleo-suave);
+    outline-offset: 2px;
+  }
+
+  .barra__pie {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: auto;
+  }
+
+  .barra__cuenta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--card) 6%, var(--tinta));
+    color: var(--card);
+    font-size: 13px;
+  }
+
+  .barra__cuenta span {
+    font-size: 12px;
+    color: color-mix(in srgb, var(--card) 70%, var(--tinta));
+  }
+
+  .app__contenido {
+    min-width: 0;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 40px 56px;
+    gap: 18px;
+  }
+
+  /* El logo y el local ya están en el menú. */
+  .app__contenido > .encabezado {
+    display: none;
+  }
+
+  /* Una columna cómoda para leer y cargar; las pantallas de dos columnas usan todo el ancho. */
+  .app__contenido > * {
+    max-width: 760px;
+  }
+
+  .app__contenido > .dos-columnas,
+  .app__contenido > .ancho {
+    max-width: none;
+  }
+
+  .solo-escritorio {
+    display: revert;
+  }
+
+  .dos-columnas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    gap: 28px;
+    align-items: start;
+  }
+
+  .dos-columnas__principal,
+  .dos-columnas__lateral {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .dos-columnas__lateral {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+  }
+
+  /* El resumen del pedido deja de flotar abajo: queda fijo a la derecha. */
+  .dos-columnas__lateral .resumen-pedido {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+.resumen-pedido__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--linea-suave);
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.resumen-pedido__lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 0;
+}
+
+.resumen-pedido__lista .mono {
+  color: var(--gris);
+  white-space: nowrap;
+}
+
+/* La foto del remito al lado de los renglones (computadora). Se abre en grande al tocarla. */
+.foto-remito {
+  border-radius: var(--radio);
+  border: 1px solid var(--linea);
+  background: var(--card);
+  overflow: hidden;
+}
+
+.foto-remito img {
+  display: block;
+  width: 100%;
+  max-height: 46dvh;
+  object-fit: contain;
+}
+
+@media (min-width: 1000px) {
+  a.foto-remito {
+    display: block;
+  }
+}
+
+/* ─── Primeros pasos (Inicio) e Instalá la app ─── */
+
+.primeros-pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.primeros-pasos__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.primeros-pasos__paso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 0;
+  border-top: 1px solid var(--linea-suave);
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.primeros-pasos__paso > svg:first-child {
+  flex-shrink: 0;
+  color: var(--linea);
+}
+
+.primeros-pasos__paso[data-hecho='true'] {
+  color: var(--gris);
+}
+
+.primeros-pasos__paso[data-hecho='true'] > svg:first-child {
+  color: var(--ok);
+}
+
+.primeros-pasos__paso .lista__texto {
+  flex-grow: 1;
+}
+
+.pasos {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.pasos__este {
+  margin-left: 8px;
+}

@@ -24,6 +24,7 @@ import {
 } from './pages/admin/Secciones'
 import { Ajustes } from './pages/Ajustes'
 import { Inicio } from './pages/Inicio'
+import { Instalar } from './pages/Instalar'
 import { Login } from './pages/Login'
 import { FichaProveedor } from './pages/proveedores/FichaProveedor'
 import { FormProducto } from './pages/proveedores/FormProducto'
@@ -132,6 +133,7 @@ export function App() {
                       }
                     />
                     <Route path="ajustes" element={<Ajustes />} />
+                    <Route path="instalar" element={<Instalar />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>
                 </Routes>

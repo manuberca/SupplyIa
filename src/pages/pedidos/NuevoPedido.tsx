@@ -137,23 +137,27 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
 
   const puedeEnviar = items.length > 0
 
+  const cabeceraProveedor = (
+    <section className="cabecera-proveedor" aria-label="Proveedor">
+      <div>
+        <div className="sobretitulo">Proveedor</div>
+        <p className="cabecera-proveedor__nombre">{proveedor.nombre}</p>
+        <div className="cabecera-proveedor__detalle">
+          {textoProximaEntrega(proveedor.dias_entrega)}
+          {proveedor.hora_limite ? ` · pedir antes de ${proveedor.hora_limite}` : ''}
+        </div>
+      </div>
+      <Link to="/pedir" className="enlace-accion">
+        Cambiar
+      </Link>
+    </section>
+  )
+
   return (
     <>
       <TituloPantalla titulo="Nuevo pedido" volver="/pedir" />
 
-      <section className="cabecera-proveedor" aria-label="Proveedor">
-        <div>
-          <div className="sobretitulo">Proveedor</div>
-          <p className="cabecera-proveedor__nombre">{proveedor.nombre}</p>
-          <div className="cabecera-proveedor__detalle">
-            {textoProximaEntrega(proveedor.dias_entrega)}
-            {proveedor.hora_limite ? ` · pedir antes de ${proveedor.hora_limite}` : ''}
-          </div>
-        </div>
-        <Link to="/pedir" className="enlace-accion">
-          Cambiar
-        </Link>
-      </section>
+      {productos.length === 0 && cabeceraProveedor}
 
       {productos.length === 0 ? (
         <section className="card formulario">
@@ -169,92 +173,110 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
           </Link>
         </section>
       ) : (
-        <>
-          {productos.length > 5 && (
-            <label className="buscador">
-              <Search size={18} aria-hidden="true" />
-              <input
-                type="search"
-                placeholder="Buscar producto"
-                aria-label="Buscar producto"
-                value={busqueda}
-                onChange={(ev) => setBusqueda(ev.target.value)}
-              />
-            </label>
-          )}
-
-          <div className="sobretitulo">Lo que le comprás · último precio pagado</div>
-          <section className="lista" aria-label="Productos">
-            {visibles.length === 0 && (
-              <p className="lista__vacia">Ningún producto coincide con la búsqueda.</p>
+        // En computadora: productos a la izquierda y el pedido siempre a la vista a la derecha.
+        <div className="dos-columnas">
+          <div className="dos-columnas__principal">
+            {cabeceraProveedor}
+            {productos.length > 5 && (
+              <label className="buscador">
+                <Search size={18} aria-hidden="true" />
+                <input
+                  type="search"
+                  placeholder="Buscar producto"
+                  aria-label="Buscar producto"
+                  value={busqueda}
+                  onChange={(ev) => setBusqueda(ev.target.value)}
+                />
+              </label>
             )}
-            {visibles.map((p) => (
-              <FilaProducto
-                key={p.id}
-                catalogo={catalogo}
-                producto={p}
-                valor={borrador.cantidades[p.id] ?? { texto: '', presentacionId: null }}
-                onCambiar={(c) => cambiar(p.id, c)}
-              />
-            ))}
-          </section>
 
-          {verObservaciones ? (
-            <label className="campo">
-              <span className="campo__etiqueta">Observaciones para el proveedor</span>
-              <textarea
-                rows={2}
-                maxLength={500}
-                value={borrador.observaciones}
-                onChange={(ev) => setBorrador((b) => ({ ...b, observaciones: ev.target.value }))}
-                placeholder="Ej: entregar antes de las 11"
-              />
-            </label>
-          ) : (
-            <button className="enlace-accion" onClick={() => setVerObservaciones(true)}>
-              <Plus size={16} aria-hidden="true" />
-              Agregar observaciones
-            </button>
-          )}
+            <div className="sobretitulo">Lo que le comprás · último precio pagado</div>
+            <section className="lista" aria-label="Productos">
+              {visibles.length === 0 && (
+                <p className="lista__vacia">Ningún producto coincide con la búsqueda.</p>
+              )}
+              {visibles.map((p) => (
+                <FilaProducto
+                  key={p.id}
+                  catalogo={catalogo}
+                  producto={p}
+                  valor={borrador.cantidades[p.id] ?? { texto: '', presentacionId: null }}
+                  onCambiar={(c) => cambiar(p.id, c)}
+                />
+              ))}
+            </section>
 
-          {error && (
-            <p className="aviso aviso--error" role="alert">
-              {error}
-            </p>
-          )}
-
-          <section className="resumen-pedido" aria-label="Resumen del pedido">
-            {puedeEnviar ? (
-              <div className="resumen-pedido__fila">
-                <div>
-                  <div className="lista__titulo">
-                    {lista.length} {lista.length === 1 ? 'producto' : 'productos'} · estimado
-                  </div>
-                  <div className="lista__detalle">
-                    con los últimos precios pagados
-                    {e.sinPrecio > 0 && ` · ${e.sinPrecio} sin precio`}
-                  </div>
-                </div>
-                <div className="resumen-pedido__total">
-                  {e.sinPrecio === lista.length ? '—' : pesos(e.total)}
-                </div>
-              </div>
+            {verObservaciones ? (
+              <label className="campo">
+                <span className="campo__etiqueta">Observaciones para el proveedor</span>
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  value={borrador.observaciones}
+                  onChange={(ev) => setBorrador((b) => ({ ...b, observaciones: ev.target.value }))}
+                  placeholder="Ej: entregar antes de las 11"
+                />
+              </label>
             ) : (
-              <p className="lista__detalle">Elegí cantidades con − y + para armar el pedido.</p>
+              <button className="enlace-accion" onClick={() => setVerObservaciones(true)}>
+                <Plus size={16} aria-hidden="true" />
+                Agregar observaciones
+              </button>
             )}
-            <a
-              className="boton boton--enviar"
-              href={puedeEnviar ? enlaceWhatsapp(proveedor.whatsapp, mensaje) : undefined}
-              target="_blank"
-              rel="noreferrer"
-              aria-disabled={!puedeEnviar}
-              onClick={enviar}
-            >
-              <Send size={18} aria-hidden="true" />
-              Enviar por WhatsApp
-            </a>
-          </section>
-        </>
+          </div>
+          <aside className="dos-columnas__lateral">
+            {error && (
+              <p className="aviso aviso--error" role="alert">
+                {error}
+              </p>
+            )}
+
+            <section className="resumen-pedido" aria-label="Resumen del pedido">
+              {puedeEnviar && (
+                <ul
+                  className="resumen-pedido__lista solo-escritorio"
+                  aria-label="Lo que vas pidiendo"
+                >
+                  {lista.map((r) => (
+                    <li key={r.id}>
+                      <span>{r.producto}</span>
+                      <span className="mono">{r.cantidadTexto}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {puedeEnviar ? (
+                <div className="resumen-pedido__fila">
+                  <div>
+                    <div className="lista__titulo">
+                      {lista.length} {lista.length === 1 ? 'producto' : 'productos'} · estimado
+                    </div>
+                    <div className="lista__detalle">
+                      con los últimos precios pagados
+                      {e.sinPrecio > 0 && ` · ${e.sinPrecio} sin precio`}
+                    </div>
+                  </div>
+                  <div className="resumen-pedido__total">
+                    {e.sinPrecio === lista.length ? '—' : pesos(e.total)}
+                  </div>
+                </div>
+              ) : (
+                <p className="lista__detalle">Elegí cantidades con − y + para armar el pedido.</p>
+              )}
+              <a
+                className="boton boton--enviar"
+                href={puedeEnviar ? enlaceWhatsapp(proveedor.whatsapp, mensaje) : undefined}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={!puedeEnviar}
+                onClick={enviar}
+              >
+                <Send size={18} aria-hidden="true" />
+                Enviar por WhatsApp
+              </a>
+            </section>
+          </aside>
+        </div>
       )}
     </>
   )
