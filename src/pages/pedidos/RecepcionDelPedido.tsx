@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router'
+import { Image as ImageIcon, PencilLine } from 'lucide-react'
+import { linkDeFoto } from '../../admin/acciones'
 import { ESTADOS_DIFERENCIA } from '../../admin/estados'
 import { supabase } from '../../lib/supabase'
 import { reportar } from '../../lib/errores'
@@ -23,13 +26,23 @@ type Recepcion = {
   total_remito: number | null
   origen: string
   observaciones: string | null
+  foto_path: string | null
+  corregida_at: string | null
   diferencias: Diferencia[]
 }
 
 const ESTADOS: Record<string, { texto: string; clase: string }> = ESTADOS_DIFERENCIA
 
 /** Lo que llegó de un pedido: remito, total y diferencias (con su seguimiento). */
-export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; version: number }) {
+export function RecepcionDelPedido({
+  pedidoId,
+  estadoPedido,
+  version,
+}: {
+  pedidoId: string
+  estadoPedido: string
+  version: number
+}) {
   const { miembro } = useSesionLista()
   const [recepciones, setRecepciones] = useState<Recepcion[] | null>(null)
   const [error, setError] = useState('')
@@ -38,7 +51,7 @@ export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; ve
     const { data, error: e } = await supabase
       .from('recepciones')
       .select(
-        'id, recibido_at, nro_remito, total_remito, origen, observaciones, diferencias ( id, tipo, monto, detalle, estado )',
+        'id, recibido_at, nro_remito, total_remito, origen, observaciones, foto_path, corregida_at, diferencias ( id, tipo, monto, detalle, estado )',
       )
       .eq('pedido_id', pedidoId)
       .order('recibido_at', { ascending: false })
@@ -105,9 +118,13 @@ export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; ve
             </div>
             <div>
               <dt>Cargado</dt>
-              <dd>{r.origen === 'ia' ? 'Leído con IA' : 'A mano'}</dd>
+              <dd>
+                {r.origen === 'ia' ? 'Leído con IA' : 'A mano'}
+                {r.corregida_at && ` · corregida ${hace(r.corregida_at)}`}
+              </dd>
             </div>
           </dl>
+          {r.foto_path && <FotoGuardada camino={r.foto_path} />}
           {r.observaciones && <p className="aviso aviso--atencion">{r.observaciones}</p>}
           {r.diferencias.length === 0 ? (
             <p className="aviso aviso--ok">Llegó todo bien.</p>
@@ -142,8 +159,48 @@ export function RecepcionDelPedido({ pedidoId, version }: { pedidoId: string; ve
               )
             })
           )}
+          {puedeResolver && !['pagado', 'cancelado'].includes(estadoPedido) && (
+            <Link to={`/recibir/corregir/${r.id}`} className="boton boton--secundario">
+              <PencilLine size={18} aria-hidden="true" />
+              Corregir la recepción
+            </Link>
+          )}
         </section>
       ))}
+    </>
+  )
+}
+
+/** La foto guardada del remito: se pide recién al tocar (el link dura 5 minutos). */
+function FotoGuardada({ camino }: { camino: string }) {
+  const [foto, setFoto] = useState<{ url: string } | { error: string } | null>(null)
+  const [pidiendo, setPidiendo] = useState(false)
+  if (foto && 'url' in foto) {
+    return (
+      <a href={foto.url} target="_blank" rel="noreferrer" className="foto-guardada">
+        <img src={foto.url} alt="Foto del remito" />
+      </a>
+    )
+  }
+  return (
+    <>
+      <button
+        className="boton boton--secundario"
+        disabled={pidiendo}
+        onClick={async () => {
+          setPidiendo(true)
+          setFoto(await linkDeFoto(camino))
+          setPidiendo(false)
+        }}
+      >
+        <ImageIcon size={18} aria-hidden="true" />
+        {pidiendo ? 'Buscando…' : 'Ver la foto del remito'}
+      </button>
+      {foto && 'error' in foto && (
+        <p className="aviso aviso--atencion" role="alert">
+          {foto.error}
+        </p>
+      )}
     </>
   )
 }

@@ -75,42 +75,64 @@ export function NuevaRecepcion() {
 type Paso = 'foto' | 'leyendo' | 'revision' | 'listo'
 type Correccion = RecepcionParaGuardar['correcciones'][number]
 
-function Recepcion({
+/** Una recepción ya confirmada, para corregirla en la misma pantalla de revisión. */
+export type RecepcionGuardada = {
+  id: string
+  recibidoAt: string
+  origen: 'ia' | 'manual'
+  nroRemito: string | null
+  total: number | null
+  /** Link temporal a la foto guardada, si tiene. */
+  urlFoto: string | null
+  /** IVA + percepciones que había leído la IA (para que el total siga cerrando). */
+  impuestos: number
+  renglones: RenglonRemito[]
+  /** Con qué precio se comparó cada producto cuando llegó (no con el de esta misma recepción). */
+  preciosAnteriores: Map<string, number | null>
+}
+
+export function Recepcion({
   catalogo,
   proveedor,
   pedido,
+  corrigiendo,
 }: {
   catalogo: Catalogo
   proveedor: Proveedor
   pedido: Pedido | null
+  corrigiendo?: RecepcionGuardada
 }) {
   const { org, local } = useSesionLista()
-  const { agregarRecepcion, enLinea } = useCola()
+  const { agregarRecepcion, agregarCorreccion, enLinea } = useCola()
+  // El id de la recepción nueva o, si se está corrigiendo, el de la corrección.
   const [id] = useState(() => crypto.randomUUID())
-  const [paso, setPaso] = useState<Paso>('foto')
-  const [origen, setOrigen] = useState<'ia' | 'manual'>('manual')
+  const [paso, setPaso] = useState<Paso>(corrigiendo ? 'revision' : 'foto')
+  const [origen, setOrigen] = useState<'ia' | 'manual'>(corrigiendo?.origen ?? 'manual')
   const [foto, setFoto] = useState<FotoLista | null>(null)
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [duplicado, setDuplicado] = useState<string | null>(null)
   const [enderezando, setEnderezando] = useState(false)
-  const [renglones, setRenglones] = useState<RenglonRemito[]>([])
-  const [nroRemito, setNroRemito] = useState('')
+  const [renglones, setRenglones] = useState<RenglonRemito[]>(corrigiendo?.renglones ?? [])
+  const [nroRemito, setNroRemito] = useState(corrigiendo?.nroRemito ?? '')
   // El total que dice la boleta (distinto de la suma de precios unitarios: puede traer IVA).
-  const [totalBoleta, setTotalBoleta] = useState('')
+  const [totalBoleta, setTotalBoleta] = useState(
+    corrigiendo?.total ? numero(corrigiendo.total, 2) : '',
+  )
   const [correcciones, setCorrecciones] = useState<Correccion[]>([])
   const [editando, setEditando] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [recibidoAt] = useState(() => new Date().toISOString())
+  const [recibidoAt] = useState(() => corrigiendo?.recibidoAt ?? new Date().toISOString())
   const entrada = useRef<HTMLInputElement>(null)
   // La foto, para verla al lado de los renglones (en computadora).
-  const urlFoto = useMemo(() => (foto ? URL.createObjectURL(foto.blob) : null), [foto])
+  const urlNueva = useMemo(() => (foto ? URL.createObjectURL(foto.blob) : null), [foto])
   useEffect(
     () => () => {
-      if (urlFoto) URL.revokeObjectURL(urlFoto)
+      if (urlNueva) URL.revokeObjectURL(urlNueva)
     },
-    [urlFoto],
+    [urlNueva],
   )
+  const urlFoto = urlNueva ?? corrigiendo?.urlFoto ?? null
 
   // Los productos de este proveedor, con su último precio antes de esta recepción.
   const productos = useMemo(() => {
@@ -123,11 +145,14 @@ function Recepcion({
         unidad: { nombre: unidad?.nombre ?? 'unidad', tipo: unidad?.tipo ?? 'unidad' },
         presentaciones: catalogo.presentaciones.filter((x) => x.producto_id === p.id),
         umbral: p.umbral_alerta_pct,
-        precioAnterior: catalogo.precios.get(p.id)?.precio_base ?? null,
+        // Al corregir, el precio "de antes" es el que había cuando llegó, no el de esta recepción.
+        precioAnterior: corrigiendo?.preciosAnteriores.has(p.id)
+          ? (corrigiendo.preciosAnteriores.get(p.id) ?? null)
+          : (catalogo.precios.get(p.id)?.precio_base ?? null),
       })
     }
     return mapa
-  }, [catalogo, proveedor.id])
+  }, [catalogo, proveedor.id, corrigiendo])
 
   // Con IA: control renglón por renglón (el total lo controla chequearCuentas, más abajo).
   const validacionRenglones = useMemo(() => {
@@ -169,7 +194,7 @@ function Recepcion({
     total !== null && total > 0 ? total : null,
     origen === 'ia' && lectura
       ? (lectura.totales.iva ?? 0) + (lectura.totales.percepciones ?? 0)
-      : 0,
+      : (corrigiendo?.impuestos ?? 0),
   )
   // Como en La Bodeguita: si falta el total o no cierra, el pedido queda para revisar antes de pagar.
   const estadoPedido: 'a_pagar' | 'revisar' =
@@ -339,8 +364,44 @@ function Recepcion({
     if (!local) return
     setGuardando(true)
     setError('')
-    const fotoPath = foto && enLinea ? await subirFoto(org.id, id, foto) : null
     const c = conciliacion
+    const items = c.filas.map((f) => ({
+      id: crypto.randomUUID(),
+      producto_id: f.productoId,
+      texto_remito: f.textos[0] ?? '',
+      cantidad_pedida_base: f.pedidoBase,
+      cantidad_base: f.llegoBase,
+      precio_unit_base: f.precioBase,
+      precio_anterior_base: f.precioAnterior,
+      subtotal: f.subtotal,
+      resultado: f.resultado,
+    }))
+    const diferenciasParaGuardar = c.diferencias.map((d) => ({
+      id: crypto.randomUUID(),
+      producto_id: d.productoId,
+      tipo: d.tipo,
+      monto: d.monto,
+      detalle: d.detalle,
+    }))
+    if (corrigiendo) {
+      const ok = await agregarCorreccion({
+        id,
+        recepcion_id: corrigiendo.id,
+        nro_remito: nroRemito.trim() || null,
+        total_remito: total !== null && total > 0 ? total : null,
+        observaciones: cuentas.alertas.join(' ').slice(0, 500),
+        estado_pedido: pedido ? estadoPedido : null,
+        items,
+        diferencias: diferenciasParaGuardar,
+      })
+      setGuardando(false)
+      if (!ok)
+        setError(
+          'El celular no dejó guardar la corrección. No cierres la app hasta que diga que se subió.',
+        )
+      return setPaso('listo')
+    }
+    const fotoPath = foto && enLinea ? await subirFoto(org.id, id, foto) : null
     const recepcion: RecepcionParaGuardar = {
       id,
       local_id: local.id,
@@ -355,24 +416,8 @@ function Recepcion({
       total_remito: total !== null && total > 0 ? total : null,
       lectura_ia: lectura,
       observaciones: cuentas.alertas.join(' ').slice(0, 500),
-      items: c.filas.map((f) => ({
-        id: crypto.randomUUID(),
-        producto_id: f.productoId,
-        texto_remito: f.textos[0] ?? '',
-        cantidad_pedida_base: f.pedidoBase,
-        cantidad_base: f.llegoBase,
-        precio_unit_base: f.precioBase,
-        precio_anterior_base: f.precioAnterior,
-        subtotal: f.subtotal,
-        resultado: f.resultado,
-      })),
-      diferencias: c.diferencias.map((d) => ({
-        id: crypto.randomUUID(),
-        producto_id: d.productoId,
-        tipo: d.tipo,
-        monto: d.monto,
-        detalle: d.detalle,
-      })),
+      items,
+      diferencias: diferenciasParaGuardar,
       correcciones,
     }
     const ok = await agregarRecepcion(recepcion)
@@ -408,7 +453,10 @@ function Recepcion({
     const { resumen } = conciliacion
     return (
       <>
-        <TituloPantalla titulo="Recepción guardada" subtitulo={subtitulo} />
+        <TituloPantalla
+          titulo={corrigiendo ? 'Recepción corregida' : 'Recepción guardada'}
+          subtitulo={subtitulo}
+        />
         <section className="card formulario">
           <p className="aviso aviso--ok" role="status">
             <CheckCircle2 size={16} aria-hidden="true" /> <strong>Listo.</strong>{' '}
@@ -416,7 +464,9 @@ function Recepcion({
               ? estadoPedido === 'a_pagar'
                 ? 'El pedido quedó a pagar.'
                 : 'El pedido quedó para revisar.'
-              : 'Se guardaron los precios.'}
+              : corrigiendo
+                ? 'Se corrigieron los precios.'
+                : 'Se guardaron los precios.'}
             {!enLinea && ' Sin señal: se sube sola cuando vuelva.'}
           </p>
           <p className="formulario__ayuda">
@@ -524,7 +574,17 @@ function Recepcion({
 
   return (
     <>
-      <TituloPantalla titulo="Recepción" subtitulo={subtitulo} />
+      <TituloPantalla
+        titulo={corrigiendo ? 'Corregir recepción' : 'Recepción'}
+        subtitulo={subtitulo}
+        volver={corrigiendo ? (pedido ? `/pedidos/${pedido.id}` : '/') : undefined}
+      />
+      {corrigiendo && (
+        <p className="aviso aviso--info">
+          Cambiá lo que estaba mal (cantidades, precios, productos, número o total) y guardá. Queda
+          registro de cómo estaba antes.
+        </p>
+      )}
 
       {/* En computadora: los renglones a la izquierda; la foto, la boleta y confirmar a la derecha. */}
       <div className="dos-columnas">
@@ -552,12 +612,18 @@ function Recepcion({
                 {nroRemito ? `Remito ${nroRemito}` : 'Remito sin número'}
               </p>
               <div className="remito__detalle">
-                Llegó {hora(recibidoAt)}
+                Llegó {corrigiendo ? hace(recibidoAt) : hora(recibidoAt)}
                 {pedido ? ` · pedido ${hace(pedido.creado_at)}` : ''}
               </div>
             </div>
           </section>
 
+          {urlFoto && (
+            <details className="foto-remito-celular">
+              <summary>Ver la foto del remito</summary>
+              <img src={urlFoto} alt="Foto del remito" />
+            </details>
+          )}
           {duplicado && (
             <p className="aviso aviso--atencion" role="alert">
               <TriangleAlert size={16} aria-hidden="true" /> <strong>Ojo:</strong> ya cargaste un
@@ -764,9 +830,9 @@ function Recepcion({
               onClick={confirmar}
               disabled={guardando || filas.length === 0}
             >
-              {guardando ? 'Guardando…' : 'Confirmar'}
+              {guardando ? 'Guardando…' : corrigiendo ? 'Guardar la corrección' : 'Confirmar'}
             </button>
-            {origen === 'ia' && (
+            {origen === 'ia' && !corrigiendo && (
               <button className="boton boton--texto" onClick={cargarAMano}>
                 La lectura está mal: cargar a mano
               </button>

@@ -8,6 +8,7 @@ import { guardar, leer } from './almacen'
 import type { Json } from '../lib/database.types'
 import {
   procesarCola,
+  type CorreccionParaGuardar,
   type Operacion,
   type PedidoParaGuardar,
   type RecepcionParaGuardar,
@@ -23,7 +24,9 @@ async function enviar(op: Operacion): Promise<ResultadoEnvio> {
     const { error } =
       op.tipo === 'crear_pedido'
         ? await supabase.rpc('guardar_pedido', { pedido: op.datos })
-        : await supabase.rpc('confirmar_recepcion', { recepcion: op.datos as unknown as Json })
+        : op.tipo === 'confirmar_recepcion'
+          ? await supabase.rpc('confirmar_recepcion', { recepcion: op.datos as unknown as Json })
+          : await supabase.rpc('corregir_recepcion', { correccion: op.datos as unknown as Json })
     if (!error) return { ok: true }
     // Sin señal o sesión vencida (se renueva sola): se reintenta más tarde.
     if (!error.code || error.code.startsWith('PGRST3') || mensajeErrorDb(error) === SIN_CONEXION) {
@@ -150,6 +153,19 @@ export function ColaProvider({ children }: { children: ReactNode }) {
     [agregar],
   )
 
+  const agregarCorreccion = useCallback(
+    (correccion: CorreccionParaGuardar) =>
+      agregar({
+        id: correccion.id,
+        tipo: 'corregir_recepcion',
+        datos: correccion,
+        creada: new Date().toISOString(),
+        intentos: 0,
+        error: null,
+      }),
+    [agregar],
+  )
+
   const reintentar = useCallback(
     (id: string) => {
       void escribir(cola.current.map((o) => (o.id === id ? { ...o, error: null } : o))).then(() =>
@@ -173,6 +189,7 @@ export function ColaProvider({ children }: { children: ReactNode }) {
       subiendo,
       agregarPedido,
       agregarRecepcion,
+      agregarCorreccion,
       reintentar,
       descartar,
       version,
@@ -183,6 +200,7 @@ export function ColaProvider({ children }: { children: ReactNode }) {
       subiendo,
       agregarPedido,
       agregarRecepcion,
+      agregarCorreccion,
       reintentar,
       descartar,
       version,

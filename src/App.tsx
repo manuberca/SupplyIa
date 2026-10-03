@@ -11,6 +11,7 @@ import { DetallePedido } from './pages/pedidos/DetallePedido'
 import { ElegirProveedor } from './pages/pedidos/ElegirProveedor'
 import { NuevoPedido } from './pages/pedidos/NuevoPedido'
 import { Pedidos } from './pages/pedidos/Pedidos'
+import { CorregirRecepcion } from './pages/recepcion/CorregirRecepcion'
 import { NuevaRecepcion } from './pages/recepcion/NuevaRecepcion'
 import { Recibir } from './pages/recepcion/Recibir'
 import { Admin } from './pages/admin/Admin'
@@ -108,6 +109,14 @@ export function App() {
                     <Route path="recibir" element={<Recibir />} />
                     <Route path="recibir/pedido/:pedidoId" element={<NuevaRecepcion />} />
                     <Route path="recibir/proveedor/:proveedorId" element={<NuevaRecepcion />} />
+                    <Route
+                      path="recibir/corregir/:recepcionId"
+                      element={
+                        <Protegida seccion="pedir">
+                          <CorregirRecepcion />
+                        </Protegida>
+                      }
+                    />
                     <Route
                       path="proveedores"
                       element={

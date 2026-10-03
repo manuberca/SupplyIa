@@ -304,6 +304,232 @@ describe('confirmar una recepción', () => {
   })
 })
 
+describe('corregir una recepción ya confirmada', () => {
+  let pedido: string
+  let recepcionId: string
+  const difPrecio = randomUUID()
+
+  // Llegó todo, con el tomate más caro: queda para revisar, con una diferencia ya reclamada.
+  beforeAll(async () => {
+    pedido = await nuevoPedido()
+    const r = recepcion(
+      pedido,
+      [
+        {
+          producto_id: tomate,
+          cantidad_base: 10,
+          precio_unit_base: 3500,
+          resultado: 'precio_subio',
+        },
+        { producto_id: lechuga, cantidad_base: 6, precio_unit_base: 500, resultado: 'ok' },
+      ],
+      {
+        estado_pedido: 'revisar',
+        total_remito: 38000,
+        diferencias: [
+          {
+            id: difPrecio,
+            producto_id: tomate,
+            tipo: 'precio',
+            monto: 6000,
+            detalle: 'Tomate subió 20,7%',
+          },
+        ],
+      },
+    )
+    recepcionId = r.id
+    expect((await c.encargadoA.rpc('confirmar_recepcion', { recepcion: r })).error).toBeNull()
+    await c.encargadoA.from('diferencias').update({ estado: 'reclamado' }).eq('id', difPrecio)
+  })
+
+  const correccion = (extra: Record<string, unknown> = {}) => ({
+    id: randomUUID(),
+    recepcion_id: recepcionId,
+    nro_remito: `0009-${corrida}`,
+    total_remito: 40535,
+    observaciones: '',
+    estado_pedido: 'revisar',
+    items: [
+      // El precio estaba mal tipeado: era 3.050. Y llegaron 7 lechugas, no 6.
+      {
+        id: randomUUID(),
+        producto_id: tomate,
+        texto_remito: 'TOMATE',
+        cantidad_pedida_base: 10,
+        cantidad_base: 10,
+        precio_unit_base: 3050,
+        precio_anterior_base: 2900,
+        subtotal: 30500,
+        resultado: 'precio_subio',
+      },
+      {
+        id: randomUUID(),
+        producto_id: lechuga,
+        texto_remito: '',
+        cantidad_pedida_base: 6,
+        cantidad_base: 7,
+        precio_unit_base: 500,
+        precio_anterior_base: null,
+        subtotal: 3500,
+        resultado: 'exceso',
+      },
+    ],
+    diferencias: [
+      {
+        id: randomUUID(),
+        producto_id: tomate,
+        tipo: 'precio',
+        monto: 1500,
+        detalle: 'Tomate subió 5,2%',
+      },
+      {
+        id: randomUUID(),
+        producto_id: lechuga,
+        tipo: 'exceso',
+        monto: null,
+        detalle: 'Vino 1 lechuga de más',
+      },
+    ],
+    ...extra,
+  })
+
+  it('recepción no puede corregir, y otro bar tampoco', async () => {
+    const r = await c.recepcionA.rpc('corregir_recepcion', { correccion: correccion() })
+    expect(r.error?.message).toMatch(/administración o el encargado/)
+    const b = await c.adminB.rpc('corregir_recepcion', { correccion: correccion() })
+    expect(b.error?.message).toMatch(/No encontramos esa recepción/)
+    // Y por fuera de la función nadie toca una recepción.
+    const directo = await c.adminA
+      .from('recepciones')
+      .update({ total_remito: 1 })
+      .eq('id', recepcionId)
+    expect(directo.error?.code).toBe('42501')
+  })
+
+  it('el encargado corrige: cambian los renglones, el total, los precios y las diferencias', async () => {
+    const corr = correccion()
+    const { data, error } = await c.encargadoA.rpc('corregir_recepcion', { correccion: corr })
+    expect(error).toBeNull()
+    expect(data).toEqual({ id: corr.id, ya_estaba: false })
+
+    const rec = await c.adminA
+      .from('recepciones')
+      .select(
+        'nro_remito, total_remito, corregida_at, recepcion_items ( producto_id, cantidad_base, precio_unit_base, resultado )',
+      )
+      .eq('id', recepcionId)
+      .single()
+    expect(rec.data?.nro_remito).toBe(`0009-${corrida}`)
+    expect(Number(rec.data?.total_remito)).toBe(40535)
+    expect(rec.data?.corregida_at).not.toBeNull()
+    expect(
+      rec.data?.recepcion_items.sort((a, b) => a.precio_unit_base! - b.precio_unit_base!),
+    ).toEqual([
+      { producto_id: lechuga, cantidad_base: 7, precio_unit_base: 500, resultado: 'exceso' },
+      { producto_id: tomate, cantidad_base: 10, precio_unit_base: 3050, resultado: 'precio_subio' },
+    ])
+
+    // El precio mal tipeado ya no está en el historial: el último del tomate es el corregido.
+    const precios = await c.adminA
+      .from('precios')
+      .select('precio_base')
+      .eq('recepcion_id', recepcionId)
+    expect(precios.data?.map((p) => Number(p.precio_base)).sort((a, b) => a - b)).toEqual([
+      500, 3050,
+    ])
+    const ultimo = await c.adminA
+      .from('ultimos_precios')
+      .select('precio_base')
+      .eq('producto_id', tomate)
+      .single()
+    expect(Number(ultimo.data?.precio_base)).toBe(3050)
+
+    // La diferencia de precio que ya estaba reclamada sigue reclamada; la nueva nace pendiente.
+    const difs = await c.adminA
+      .from('diferencias')
+      .select('tipo, monto, estado')
+      .eq('recepcion_id', recepcionId)
+      .order('tipo')
+    expect(difs.data).toEqual([
+      { tipo: 'exceso', monto: null, estado: 'pendiente' },
+      { tipo: 'precio', monto: 1500, estado: 'reclamado' },
+    ])
+  })
+
+  it('queda guardado cómo estaba antes', async () => {
+    const { data } = await c.adminA
+      .from('recepcion_versiones')
+      .select('anterior')
+      .eq('recepcion_id', recepcionId)
+    expect(data).toHaveLength(1)
+    const anterior = data![0]!.anterior as {
+      recepcion: { total_remito: number }
+      estado_pedido: string
+      items: { precio_unit_base: number }[]
+      diferencias: { estado: string }[]
+    }
+    expect(anterior.recepcion.total_remito).toBe(38000)
+    expect(anterior.estado_pedido).toBe('revisar')
+    expect(anterior.items.map((i) => i.precio_unit_base).sort((a, b) => a - b)).toEqual([500, 3500])
+    expect(anterior.diferencias).toEqual([expect.objectContaining({ estado: 'reclamado' })])
+    // Otro bar no ve las versiones.
+    expect(
+      (await c.adminB.from('recepcion_versiones').select('id').eq('recepcion_id', recepcionId))
+        .data,
+    ).toEqual([])
+  })
+
+  it('reintentar la misma corrección no la aplica dos veces', async () => {
+    const corr = correccion({ total_remito: 41000 })
+    expect((await c.encargadoA.rpc('corregir_recepcion', { correccion: corr })).data).toEqual({
+      id: corr.id,
+      ya_estaba: false,
+    })
+    expect((await c.encargadoA.rpc('corregir_recepcion', { correccion: corr })).data).toEqual({
+      id: corr.id,
+      ya_estaba: true,
+    })
+    const versiones = await c.adminA
+      .from('recepcion_versiones')
+      .select('id')
+      .eq('recepcion_id', recepcionId)
+    expect(versiones.data).toHaveLength(2)
+    const items = await c.adminA
+      .from('recepcion_items')
+      .select('id')
+      .eq('recepcion_id', recepcionId)
+    expect(items.data).toHaveLength(2)
+  })
+
+  it('si al corregir ya no hay diferencias, el pedido pasa a pagar; y puede volver a revisar', async () => {
+    const todoBien = correccion({ estado_pedido: 'a_pagar', diferencias: [] })
+    expect(
+      (await c.encargadoA.rpc('corregir_recepcion', { correccion: todoBien })).error,
+    ).toBeNull()
+    const estado = () => c.adminA.from('pedidos').select('estado').eq('id', pedido).single()
+    expect((await estado()).data?.estado).toBe('a_pagar')
+    expect(
+      (await c.encargadoA.rpc('corregir_recepcion', { correccion: correccion() })).error,
+    ).toBeNull()
+    expect((await estado()).data?.estado).toBe('revisar')
+  })
+
+  it('un pedido pagado ya no se corrige', async () => {
+    expect(
+      (
+        await c.encargadoA.rpc('corregir_recepcion', {
+          correccion: correccion({ estado_pedido: 'a_pagar', diferencias: [] }),
+        })
+      ).error,
+    ).toBeNull()
+    expect(
+      (await c.adminA.from('pedidos').update({ estado: 'pagado' }).eq('id', pedido)).error,
+    ).toBeNull()
+    const { error } = await c.encargadoA.rpc('corregir_recepcion', { correccion: correccion() })
+    expect(error?.message).toMatch(/El pedido ya está pagado/)
+  })
+})
+
 describe('permisos', () => {
   it('recepción no puede recibir en un local que no tiene', async () => {
     const r = recepcion(

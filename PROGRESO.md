@@ -143,6 +143,19 @@ Queda para antes del piloto: SMTP propio, sacar la protección de acceso de Netl
 - [ ] Deploy (sin migración) y `npm run prod:probar`.
 - [ ] Siguiente: dominio propio (lo compra Manu) → dirección en Netlify + mails con Resend.
 
+## Mejoras para el piloto (en curso, desde el 3/10)
+
+Orden acordado con Manu: lo que va a pedir el piloto → pedido sugerido → comparar proveedores → boletas largas sin cortes.
+
+- [x] **Corregir una recepción ya confirmada** (administración o encargado, mientras el pedido no esté pagado ni cancelado). Reabre la misma pantalla de revisión con lo guardado (`/recibir/corregir/:id`, desde el pedido o desde el Panel): se cambian cantidades, precios, productos, número y total. Migración `corregir_recepcion` en **dev**: `corregir_recepcion(jsonb)` idempotente, guarda cómo estaba antes en `recepcion_versiones`, rearma renglones, precios y diferencias (conservando el seguimiento de las que siguen), y puede mover el pedido entre "revisar" y "a pagar". Pasa por la cola sin conexión. Al corregir, cada precio se compara con el que había cuando llegó, no con el de esa misma recepción.
+- [x] **La foto del remito en el celular**: plegada en la revisión ("Ver la foto del remito") y, ya guardada, desde el pedido.
+- [x] **Repetir este pedido**: arma un pedido nuevo con las mismas cantidades para revisarlo y mandarlo; avisa lo que ya no se puede pedir igual.
+- [x] Tests: `npm test` 217, `npm run test:db` 76, `npm run e2e` 25.
+- [ ] Migración `corregir_recepcion` en prod (pedir confirmación) y deploy.
+- [ ] Pedido sugerido.
+- [ ] Comparar proveedores.
+- [ ] Boletas largas sin cortes.
+
 ## Datos en dev
 
 - Bar Prueba A y Bar Prueba B: los usan los tests, no tocarlos a mano. Los tests dejan locales archivados y dos miembros dados de baja (`invitado-a`, `invitado-e2e`): es esperable.

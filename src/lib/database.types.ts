@@ -682,9 +682,52 @@ export type Database = {
           },
         ]
       }
+      recepcion_versiones: {
+        Row: {
+          anterior: Json
+          corregida_at: string
+          corregida_por: string
+          id: string
+          org_id: string
+          recepcion_id: string
+        }
+        Insert: {
+          anterior: Json
+          corregida_at?: string
+          corregida_por?: string
+          id: string
+          org_id: string
+          recepcion_id: string
+        }
+        Update: {
+          anterior?: Json
+          corregida_at?: string
+          corregida_por?: string
+          id?: string
+          org_id?: string
+          recepcion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recepcion_versiones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepcion_versiones_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "recepciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recepciones: {
         Row: {
           confirmada: boolean
+          corregida_at: string | null
           fecha_remito: string | null
           foto_path: string | null
           id: string
@@ -703,6 +746,7 @@ export type Database = {
         }
         Insert: {
           confirmada?: boolean
+          corregida_at?: string | null
           fecha_remito?: string | null
           foto_path?: string | null
           id: string
@@ -721,6 +765,7 @@ export type Database = {
         }
         Update: {
           confirmada?: boolean
+          corregida_at?: string | null
           fecha_remito?: string | null
           foto_path?: string | null
           id?: string
@@ -855,6 +900,7 @@ export type Database = {
     }
     Functions: {
       confirmar_recepcion: { Args: { recepcion: Json }; Returns: Json }
+      corregir_recepcion: { Args: { correccion: Json }; Returns: Json }
       devolver_lectura: {
         Args: { p_mes: string; p_org: string }
         Returns: undefined

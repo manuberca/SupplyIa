@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
-import { Copy, RotateCcw, ScanLine, Send, TriangleAlert, X } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { Copy, Repeat, RotateCcw, ScanLine, Send, TriangleAlert, X } from 'lucide-react'
 import { EsperarCatalogo } from '../../catalogo/EsperarCatalogo'
 import type { Catalogo } from '../../catalogo/tipos'
 import { TituloPantalla } from '../../components/TituloPantalla'
@@ -13,6 +13,7 @@ import { usePedidos } from '../../pedidos/contexto'
 import { enlaceWhatsapp, estimado } from '../../pedidos/logica'
 import { ESTADOS, numeroPedido, type EstadoPedido, type Pedido } from '../../pedidos/tipos'
 import { useSesionLista } from '../../sesion/contexto'
+import { borradorDesdePedido, guardarBorrador } from '../../pedidos/borrador'
 import { RecepcionDelPedido } from './RecepcionDelPedido'
 
 export function DetallePedido() {
@@ -40,7 +41,8 @@ export function DetallePedido() {
 
 function Detalle({ pedido, catalogo }: { pedido: Pedido; catalogo: Catalogo }) {
   const [params] = useSearchParams()
-  const { org, local, miembro } = useSesionLista()
+  const { org, local, miembro, usuario } = useSesionLista()
+  const navigate = useNavigate()
   const { version } = useCola()
   const [copiado, setCopiado] = useState(false)
   const proveedor = catalogo.proveedores.find((p) => p.id === pedido.proveedor_id)
@@ -53,6 +55,13 @@ function Detalle({ pedido, catalogo }: { pedido: Pedido; catalogo: Catalogo }) {
   })
   const recienEnviado = params.get('enviado') === '1'
   const estado = ESTADOS[pedido.estado]
+
+  /** Deja armado un pedido nuevo con las mismas cantidades, para revisarlo y mandarlo. */
+  function repetir() {
+    const { borrador, omitidos } = borradorDesdePedido(pedido.items, catalogo)
+    guardarBorrador(usuario.id, pedido.proveedor_id, borrador)
+    void navigate(`/pedir/${pedido.proveedor_id}`, { state: { repetido: true, omitidos } })
+  }
 
   async function copiar() {
     try {
@@ -144,7 +153,16 @@ function Detalle({ pedido, catalogo }: { pedido: Pedido; catalogo: Catalogo }) {
         </Link>
       )}
 
-      {!pedido.subida && <RecepcionDelPedido pedidoId={pedido.id} version={version} />}
+      {!pedido.subida && (
+        <RecepcionDelPedido pedidoId={pedido.id} estadoPedido={pedido.estado} version={version} />
+      )}
+
+      {puede(miembro.rol, 'pedir') && proveedor?.activo && (
+        <button className="boton boton--secundario" onClick={repetir}>
+          <Repeat size={18} aria-hidden="true" />
+          Repetir este pedido
+        </button>
+      )}
 
       {!pedido.subida && puede(miembro.rol, 'pedir') && <CambiarEstado pedido={pedido} />}
     </>

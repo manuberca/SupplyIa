@@ -389,3 +389,111 @@ test('una foto de costado con lectura dudosa se endereza sola y se lee de nuevo'
   expect(pedidos[1]!.alternativa).not.toBe(pedidos[1]!.imagen)
   await expect(page.getByLabel('Total de la boleta')).toHaveValue('60.000')
 })
+
+test('una recepción ya confirmada se corrige desde el pedido, y el pedido se puede repetir', async ({
+  page,
+}) => {
+  // Un pedido que llegó completo pero se cargó con el total y un precio equivocados.
+  const pedidoId = await nuevoPedido()
+  const recepcionId = randomUUID()
+  const renglon = (producto_id: string, cantidad: number, precio: number) => ({
+    id: randomUUID(),
+    producto_id,
+    texto_remito: '',
+    cantidad_pedida_base: cantidad,
+    cantidad_base: cantidad,
+    precio_unit_base: precio,
+    precio_anterior_base: precio,
+    subtotal: cantidad * precio,
+    resultado: 'ok',
+  })
+  const { error } = await db.rpc('confirmar_recepcion', {
+    recepcion: {
+      id: recepcionId,
+      local_id: LOCALES.aPichincha.id,
+      proveedor_id: ids.proveedor,
+      pedido_id: pedidoId,
+      origen: 'manual',
+      nro_remito: `0007-${corrida}`,
+      total_remito: 100000,
+      estado_pedido: 'a_pagar',
+      items: [
+        renglon(ids.vacio, 12, 14200),
+        renglon(ids.matambre, 6, 11800),
+        renglon(ids.entrana, 4, 18500),
+      ],
+      diferencias: [],
+      correcciones: [],
+    },
+  })
+  if (error) throw error
+
+  // Recepción (el rol) no corrige; el encargado sí.
+  await entrarComoRecepcion(page)
+  await page.goto(`/pedidos/${pedidoId}`)
+  await expect(page.getByText('Llegó todo bien.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Corregir la recepción' })).toHaveCount(0)
+  await page.getByRole('link', { name: /abrir ajustes/ }).click()
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click()
+
+  const encargado = USUARIOS.find((x) => x.clave === 'encargadoA')!
+  await page.getByLabel('Mail').fill(encargado.email)
+  await page.getByLabel('Contraseña').fill(clave)
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  // El pedido es de Pichincha: el encargado, que ve todos los locales, se para en ese.
+  await page.getByLabel('Local en el que estás').selectOption({ label: 'Pichincha' })
+  await page.goto(`/pedidos/${pedidoId}`)
+  await page.getByRole('link', { name: 'Corregir la recepción' }).click()
+
+  // La misma pantalla de revisión, con lo que estaba guardado.
+  await expect(page.getByRole('heading', { name: 'Corregir recepción' })).toBeVisible()
+  await expect(page.getByLabel('Número de boleta o remito')).toHaveValue(`0007-${corrida}`)
+  await expect(page.getByLabel('Total de la boleta')).toHaveValue('100.000')
+  // Con el total mal cargado, la app ya avisaba que los renglones no daban.
+  await expect(
+    page.getByText(/Los renglones suman \$315\.200 pero el total dice \$100\.000/),
+  ).toBeVisible()
+
+  // El matambre en realidad vino a 12.900 (subió 9,3%), y el total era otro.
+  await page.getByRole('button', { name: /^Matambre/ }).click()
+  await page.getByLabel(/^Precio/).fill('12900')
+  await page.getByRole('button', { name: 'Listo' }).click()
+  await expect(page.getByText(/Subió 9,3%/)).toBeVisible()
+  await page.getByLabel('Total de la boleta').fill('321.800')
+  await expect(page.getByText(/Los renglones suman/)).toHaveCount(0)
+  await captura(page, 'r6-corregir')
+  await page.getByRole('button', { name: 'Guardar la corrección' }).click()
+  await expect(page.getByRole('heading', { name: 'Recepción corregida' })).toBeVisible()
+
+  await expect
+    .poll(
+      async () =>
+        (await db.from('recepciones').select('total_remito').eq('id', recepcionId).single()).data
+          ?.total_remito,
+      { timeout: 30_000 },
+    )
+    .toBe(321800)
+  const { data } = await db
+    .from('recepciones')
+    .select(
+      'corregida_at, recepcion_items ( producto_id, precio_unit_base ), recepcion_versiones ( anterior )',
+    )
+    .eq('id', recepcionId)
+    .single()
+  expect(data?.corregida_at).not.toBeNull()
+  expect(data?.recepcion_items.find((i) => i.producto_id === ids.matambre)?.precio_unit_base).toBe(
+    12900,
+  )
+  expect(data?.recepcion_versiones).toHaveLength(1)
+
+  // En el pedido se ve corregida, y se puede repetir con las mismas cantidades.
+  await page.getByRole('link', { name: 'Ver el pedido' }).click()
+  await expect(page.getByText(/corregida/)).toBeVisible()
+  await expect(page.getByText('$321.800')).toBeVisible()
+  await page.getByRole('button', { name: 'Repetir este pedido' }).click()
+  await expect(page.getByRole('heading', { name: 'Nuevo pedido' })).toBeVisible()
+  await expect(page.getByText('Cargamos las cantidades del pedido anterior')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Resumen del pedido' })).toContainText(
+    '3 productos',
+  )
+})

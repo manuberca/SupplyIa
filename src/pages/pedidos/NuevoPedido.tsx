@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Minus, Plus, Search, Send } from 'lucide-react'
 import { EsperarCatalogo } from '../../catalogo/EsperarCatalogo'
 import type { Catalogo, Producto, Proveedor } from '../../catalogo/tipos'
@@ -46,6 +46,8 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
   const { usuario, org, local } = useSesionLista()
   const { agregarPedido } = useCola()
   const [id] = useState(() => crypto.randomUUID())
+  // Si viene de "Repetir este pedido": qué quedó afuera porque ya no se puede pedir igual.
+  const repetido = useLocation().state as { repetido?: boolean; omitidos?: string[] } | null
   const [borrador, setBorrador] = useState<Borrador>(
     () => leerBorrador(usuario.id, proveedor.id) ?? { cantidades: {}, observaciones: '' },
   )
@@ -176,6 +178,14 @@ function Formulario({ catalogo, proveedor }: { catalogo: Catalogo; proveedor: Pr
         // En computadora: productos a la izquierda y el pedido siempre a la vista a la derecha.
         <div className="dos-columnas">
           <div className="dos-columnas__principal">
+            {repetido?.repetido && (
+              <p className="aviso aviso--info" role="status">
+                Cargamos las cantidades del pedido anterior. Revisalas y mandalo.
+                {repetido.omitidos?.length
+                  ? ` No se pudo repetir: ${repetido.omitidos.join(', ')}.`
+                  : ''}
+              </p>
+            )}
             {cabeceraProveedor}
             {productos.length > 5 && (
               <label className="buscador">

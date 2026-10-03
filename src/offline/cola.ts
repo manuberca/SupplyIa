@@ -53,6 +53,19 @@ export type RecepcionParaGuardar = {
   correcciones: { campo: string; detectado: string | null; correcto: string | null }[]
 }
 
+/** Lo que manda la pantalla al corregir una recepción ya confirmada (corregir_recepcion()). */
+export type CorreccionParaGuardar = {
+  /** El id de la corrección (no el de la recepción): reintentarla no la aplica dos veces. */
+  id: string
+  recepcion_id: string
+  nro_remito: string | null
+  total_remito: number | null
+  observaciones: string
+  estado_pedido: 'a_pagar' | 'revisar' | null
+  items: RecepcionParaGuardar['items']
+  diferencias: RecepcionParaGuardar['diferencias']
+}
+
 export type Operacion = {
   id: string
   creada: string
@@ -62,6 +75,7 @@ export type Operacion = {
 } & (
   | { tipo: 'crear_pedido'; datos: PedidoParaGuardar }
   | { tipo: 'confirmar_recepcion'; datos: RecepcionParaGuardar }
+  | { tipo: 'corregir_recepcion'; datos: CorreccionParaGuardar }
 )
 
 export type ResultadoEnvio =

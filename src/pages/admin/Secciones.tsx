@@ -268,6 +268,12 @@ function FilaRecepcion({
                 </tbody>
               </table>
               <div className="detalle-recepcion__foto">
+                <Link
+                  className="boton boton--secundario boton--chico"
+                  to={`/recibir/corregir/${x.id}`}
+                >
+                  Corregir esta recepción
+                </Link>
                 {!x.foto_path ? (
                   <p className="bloque__vacio">Se cargó sin foto.</p>
                 ) : foto && 'url' in foto ? (
